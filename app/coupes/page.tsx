@@ -1,12 +1,49 @@
 "use client";
 import { motion, AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { COUPES } from "@/data/coupes";
 import { Scissors, Star, Timer, ArrowRight, X, Maximize2 } from "lucide-react";
 
+interface Coupe {
+  id: string;
+  nom: string;
+  description: string;
+  tempsEstimation: string;
+  difficulte: number;
+  image: string;
+  conseils: string[];
+}
+
 export default function Coupes() {
+  const [coupes, setCoupes] = useState<Coupe[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCoupes = async () => {
+      try {
+        const response = await fetch('/api/coupes');
+        if (response.ok) {
+          const data = await response.json();
+          setCoupes(data.data || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch coupes:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCoupes();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="pt-32 px-6 pb-20 max-w-7xl mx-auto">
+        <div className="text-center text-white/60">Chargement des coupes...</div>
+      </main>
+    );
+  }
 
   return (
     <main className="pt-32 px-6 pb-20 max-w-7xl mx-auto space-y-24">
@@ -17,7 +54,7 @@ export default function Coupes() {
 
       {/* Main Styles List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-        {COUPES.map((coupe, i) => (
+        {coupes.map((coupe, i) => (
           <motion.div
             key={coupe.id}
             initial={{ opacity: 0, y: 20 }}
@@ -27,28 +64,28 @@ export default function Coupes() {
           >
             <Link href={`/coupes/${coupe.id}`} className="block glass-card overflow-hidden rounded-3xl">
               <div className="aspect-[16/9] relative overflow-hidden">
-                <img 
-                  src={coupe.image} 
-                  alt={coupe.nom} 
+                <img
+                  src={coupe.image}
+                  alt={coupe.nom}
                   className="w-full h-full object-cover grayscale transition-all duration-700 group-hover:grayscale-0 group-hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-bg-base via-transparent to-transparent opacity-60" />
-                
+
                 <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 border border-white/10">
                   <Timer size={12} className="text-white/60" />
                   <span className="text-[10px] font-bold uppercase tracking-widest">{coupe.tempsEstimation}</span>
                 </div>
               </div>
-              
+
               <div className="p-8 flex justify-between items-end">
                 <div className="space-y-3">
                   <h3 className="text-3xl font-bold uppercase tracking-tighter group-hover:translate-x-2 transition-transform duration-500">{coupe.nom}</h3>
                   <div className="flex gap-1">
                     {Array.from({ length: 5 }).map((_, idx) => (
-                      <Star 
-                        key={idx} 
-                        size={10} 
-                        className={idx < coupe.difficulte ? "text-white fill-white" : "text-white/10"} 
+                      <Star
+                        key={idx}
+                        size={10}
+                        className={idx < coupe.difficulte ? "text-white fill-white" : "text-white/10"}
                       />
                     ))}
                   </div>
@@ -70,7 +107,7 @@ export default function Coupes() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {COUPES.map((coupe, i) => (
+          {coupes.map((coupe, i) => (
             <motion.div
               key={`gallery-${coupe.id}`}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -80,9 +117,9 @@ export default function Coupes() {
               className="group relative aspect-[4/5] overflow-hidden rounded-2xl cursor-zoom-in"
               onClick={() => setSelectedImage(coupe.image)}
             >
-              <img 
-                src={coupe.image} 
-                alt={coupe.nom} 
+              <img
+                src={coupe.image}
+                alt={coupe.nom}
                 className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
               />
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -102,7 +139,7 @@ export default function Coupes() {
       <AnimatePresence>
         {selectedImage && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 md:p-12">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -115,12 +152,12 @@ export default function Coupes() {
               exit={{ opacity: 0, scale: 0.9 }}
               className="relative z-10 w-full max-w-5xl aspect-video rounded-3xl overflow-hidden bg-white/5 border border-white/10"
             >
-              <img 
-                src={selectedImage} 
-                alt="Enlarged Cut" 
+              <img
+                src={selectedImage}
+                alt="Enlarged Cut"
                 className="w-full h-full object-contain"
               />
-              <button 
+              <button
                 onClick={() => setSelectedImage(null)}
                 className="absolute top-6 right-6 p-3 bg-white/10 hover:bg-white/20 rounded-full border border-white/10 transition-colors"
               >
@@ -139,3 +176,4 @@ export default function Coupes() {
     </main>
   );
 }
+

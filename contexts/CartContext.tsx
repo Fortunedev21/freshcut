@@ -1,16 +1,18 @@
 "use client";
 import React, { createContext, useContext, useState } from "react";
 
-interface CartItem {
+export interface CartItem {
   id: string;
   nom: string;
   prix: number;
   quantite: number;
+  type?: "product" | "service" | "coupe"; // Type de l'article
+  description?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: { id: string; nom: string; prix: number }) => void;
+  addToCart: (product: { id: string; nom: string; prix: number; type?: string; description?: string }) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
@@ -26,17 +28,24 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const addToCart = (product: { id: string; nom: string; prix: number }) => {
+  const addToCart = (product: { id: string; nom: string; prix: number; type?: string; description?: string }) => {
     setItems(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
-        return prev.map(item => 
+        return prev.map(item =>
           item.id === product.id ? { ...item, quantite: item.quantite + 1 } : item
         );
       }
-      return [...prev, { id: product.id, nom: product.nom, prix: product.prix, quantite: 1 }];
+      return [...prev, {
+        id: product.id,
+        nom: product.nom,
+        prix: product.prix,
+        quantite: 1,
+        type: (product.type as "product" | "service" | "coupe") || "product",
+        description: product.description
+      }];
     });
-    setIsCartOpen(true); // Open drawer when adding item
+    setIsCartOpen(true);
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -59,13 +68,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const itemCount = items.reduce((acc, item) => acc + item.quantite, 0);
 
   return (
-    <CartContext.Provider value={{ 
-      items, 
-      addToCart, 
-      removeFromCart, 
+    <CartContext.Provider value={{
+      items,
+      addToCart,
+      removeFromCart,
       updateQuantity,
-      clearCart, 
-      total, 
+      clearCart,
+      total,
       itemCount,
       isCartOpen,
       setIsCartOpen

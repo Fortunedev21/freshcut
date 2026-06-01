@@ -16,11 +16,15 @@ export default function Home() {
     transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }
   };
 
-  const stagger = (i: number) => ({
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] }
-  });
+const stagger = (i: number) => ({
+  initial: { opacity: 0, scale: 0.9 },
+  animate: { opacity: 1, scale: 1 },
+  transition: { 
+    duration: 0.5, 
+    delay: i * 0.1, 
+    ease: [0.34, 1.56, 0.64, 1] as const // Courbe avec un léger rebond (overshoot)
+  }
+});
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -57,7 +61,7 @@ export default function Home() {
           </p>
         </motion.div>
 
-        <motion.div {...stagger(3)} className="flex items-center gap-4 mt-8">
+        <motion.div {...stagger(3)} className="flex items-center gap-4 mt-8 z-15">
           <Link href="/reserver" className="btn-primary">
             Réserver maintenant
           </Link>
@@ -66,7 +70,7 @@ export default function Home() {
           </Link>
         </motion.div>
         
-        <motion.span {...stagger(4)} className="text-[10px] text-white/20 mt-8 uppercase tracking-[0.2em]">
+        <motion.span {...stagger(4)} className="text-[10px] text-white/20 mt-8 uppercase tracking-[0.2em] z-10">
           ↓ Défiler
         </motion.span>
 
@@ -209,11 +213,10 @@ export default function Home() {
               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
                 <div className="flex items-center gap-1.5 text-white/80">
                   <Heart size={14} fill="currentColor" />
-                  <span className="text-[10px] font-bold">{Math.floor(Math.random() * 50) + 20}</span>
+                  
                 </div>
                 <div className="flex items-center gap-1.5 text-white/80">
                   <MessageCircle size={14} fill="currentColor" />
-                  <span className="text-[10px] font-bold">{Math.floor(Math.random() * 10) + 2}</span>
                 </div>
               </div>
             </motion.div>
