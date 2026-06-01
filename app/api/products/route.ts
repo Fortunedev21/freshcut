@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST create new product (SUPER_ADMIN only)
+// POST create new product (ADMIN or SUPER_ADMIN)
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(['SUPER_ADMIN']);
+    await requireRole(['SUPER_ADMIN', 'ADMIN']);
 
     const body = await request.json();
     const { nom, categorie, prix, description, image, stock } = body;
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     return successResponse(product, 'Product created', 201);
   } catch (error: any) {
     if (error.message === 'Forbidden') {
-      return errorResponse('Only SuperAdmin can create products', 403);
+      return errorResponse('Only admin can create products', 403);
     }
     if (error.message === 'Unauthorized') {
       return errorResponse('Please login first', 401);

@@ -71,7 +71,7 @@ export default function CutDetail() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="lg:col-span-7 aspect-[4/5] overflow-hidden rounded-[40px]"
+            className="lg:col-span-7 aspect-4/5 overflow-hidden rounded-[40px]"
           >
             <img src={coupe.image} alt={coupe.nom} className="w-full h-full object-cover" />
           </motion.div>
@@ -110,7 +110,7 @@ export default function CutDetail() {
                 <div className="space-y-4">
                     {coupe.conseils.map((conseil, i) => (
                         <div key={i} className="flex gap-4 items-start">
-                            <div className="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-white/5 flex items-center justify-center">
+                            <div className="mt-1 shrink-0 w-5 h-5 rounded-full bg-white/5 flex items-center justify-center">
                                 <CheckCircle2 size={12} className="text-white/40" />
                             </div>
                             <p className="text-sm text-white/80">{conseil}</p>
@@ -120,7 +120,7 @@ export default function CutDetail() {
             </div>
 
             <div className="pt-8 border-t border-white/5 flex flex-col gap-4">
-                <Link href="/reserver" className="btn-primary py-6 text-center text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
+                <Link href={`/reserver?coupe=${coupe.id}`} className="btn-primary py-6 text-center text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
                     Réserver ce style
                     <Calendar size={18} />
                 </Link>

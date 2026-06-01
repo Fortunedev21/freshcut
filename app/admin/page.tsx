@@ -19,7 +19,7 @@ export default function AdminPage() {
     const userRole = (session?.user as any)?.role;
 
     if (userRole === 'SUPER_ADMIN') {
-      router.push('/admin/super');
+      router.push('/admin/dashboard');
     } else if (userRole === 'ADMIN') {
       router.push('/admin/coiffeur');
     } else {
@@ -28,7 +28,7 @@ export default function AdminPage() {
   }, [status, session, router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A]">
+    <div className="flex items-center justify-center min-h-screen bg-bg-base">
       <div className="text-white text-center">
         <h1 className="text-2xl font-bold mb-2">Redirection...</h1>
         <p className="text-white/60">En cours de chargement de votre tableau de bord</p>

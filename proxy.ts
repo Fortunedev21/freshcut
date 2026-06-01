@@ -12,6 +12,10 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
+    if (pathname.startsWith('/admin/dashboard') && userRole !== 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL('/admin/coiffeur', request.url))
+    }
+
     const isBoss = pathname.startsWith('/admin/boss')
     const isCoiffeur = pathname.startsWith('/admin/coiffeur')
 

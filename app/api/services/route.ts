@@ -20,10 +20,10 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST create new service (SUPER_ADMIN only)
+// POST create new service (ADMIN or SUPER_ADMIN)
 export async function POST(request: NextRequest) {
   try {
-    await requireRole(['SUPER_ADMIN']);
+    await requireRole(['SUPER_ADMIN', 'ADMIN']);
 
     const body = await request.json();
     const { nom, categorie, description, duree, prix, badge } = body;
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     return successResponse(service, 'Service created', 201);
   } catch (error: any) {
     if (error.message === 'Forbidden') {
-      return errorResponse('Only SuperAdmin can create services', 403);
+      return errorResponse('Only admin can create services', 403);
     }
     if (error.message === 'Unauthorized') {
       return errorResponse('Please login first', 401);

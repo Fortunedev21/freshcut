@@ -33,7 +33,7 @@ export default function CoiffeurDashboard() {
     if (status === 'unauthenticated') {
       router.push('/login');
     } else if (status === 'authenticated' && !['COIFFEUR', 'ADMIN'].includes((session?.user as any)?.role)) {
-      router.push('/admin/boss');
+      router.push('/admin/dashboard');
     } else {
       fetchTodayBookings();
     }
@@ -109,9 +109,9 @@ export default function CoiffeurDashboard() {
 
   return (
     <main className='pt-32 px-6 pb-20 max-w-7xl mx-auto w-full'>
-      <div className="min-h-screen bg-[#0A0A0A]">
+      <div className="min-h-screen bg-bg-base">
       {/* Header */}
-      <div className="bg-gradient-to-r from-white/5 to-transparent border-b border-white/10 p-6">
+      <div className="bg-linear-to-r from-white/5 to-transparent border-b border-white/10 p-6">
         <div className="max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold text-white mb-2">Tableau de Bord Coiffeur</h1>
           <p className="text-white/60">Gérez vos rendez-vous d'aujourd'hui</p>
@@ -202,7 +202,7 @@ export default function CoiffeurDashboard() {
           onClick={() => setSelectedBooking(null)}
         >
           <div
-            className="bg-[#0A0A0A] border border-white/10 rounded-xl p-6 max-w-md w-full"
+            className="bg-bg-base border border-white/10 rounded-xl p-6 max-w-md w-full"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-bold text-white mb-4">
