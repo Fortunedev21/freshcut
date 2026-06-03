@@ -34,12 +34,12 @@ type CoupeType = {
   id: string;
   nom: string;
   tempsEstimation: string;
-  prix?: number; // Ajouté au cas où tes coupes ont un prix spécifique
+  prix?: number; 
 };
 
 interface BookingState {
   step: number;
-  serviceId: string | null; // Gardé pour la rétrocompatibilité ou le cas classique sans coupe
+  serviceId: string | null;
   date: string | null;
   time: string | null;
   client: {
@@ -78,7 +78,6 @@ export default function Reserver() {
   const [coupes, setCoupes] = useState<CoupeType[]>([]);
   const [selectedCoupe, setSelectedCoupe] = useState<CoupeType | null>(null);
   
-  // Nouvel état pour gérer la multi-sélection des services "au choix"
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
 
   const [state, setState] = useState<BookingState>({
@@ -169,24 +168,20 @@ export default function Reserver() {
     return services; 
   }, [services, serviceParam, coupeParam]);
 
-  // Gestion de la sélection/désélection d'un service
   const handleServiceToggle = (id: string) => {
     if (coupeParam) {
-      // Mode au choix (multi-sélection)
       setSelectedServiceIds((prev) =>
         prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
       );
     } else {
-      // Mode classique (sélection unique et passage au step suivant)
       setSelectedServiceIds([id]);
       setState((prev) => ({ ...prev, serviceId: id }));
       nextStep();
     }
   };
 
-  // Calcul dynamique des prix
   const totalPrix = useMemo(() => {
-    const prixCoiffure = selectedCoupe?.prix ?? 0; // Remplace par le prix fixe de la coiffure si disponible
+    const prixCoiffure = selectedCoupe?.prix ?? 0;
     const prixServices = services
       .filter((s) => selectedServiceIds.includes(s.id))
       .reduce((sum, s) => sum + s.prix, 0);

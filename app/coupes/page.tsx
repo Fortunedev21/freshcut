@@ -53,7 +53,7 @@ export default function Coupes() {
       </header>
 
       {/* Main Styles List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12">
         {coupes.map((coupe, i) => (
           <motion.div
             key={coupe.id}

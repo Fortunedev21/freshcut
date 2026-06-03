@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -24,13 +21,9 @@ model User {
 }
 
 enum UserRole {
-  ADMIN         // Coiffeur (gère ses RDV)
-  SUPER_ADMIN   // Boss (gère tout)
+  ADMIN
+  SUPER_ADMIN
 }
-
-// ============================================
-// Haircut Styles (Coiffures/Lookbook) - Admin can add with photos
-// ============================================
 
 model Coupe {
   id                String   @id @default(cuid())
@@ -53,8 +46,8 @@ model Coupe {
 model Product {
   id          String   @id @default(cuid())
   nom         String
-  categorie   String   // BARBE, CHEVEUX, ACCESSOIRES, MERCHANDISING
-  prix        Int      // in FCFA
+  categorie   String   
+  prix        Int      
   description String
   image       String?
   stock       Int      @default(0)
@@ -64,28 +57,44 @@ model Product {
   @@index([categorie])
 }
 
+enum ClientType {
+  ADULTE
+  ETUDIANT
+  ENFANT
+}
+
 // ============================================
-// Services (Haircut & Beard Services)
+// Services & Reservations
 // ============================================
 
 model Service {
-  id          String    @id @default(cuid())
-  nom         String    @unique
-  categorie   String    // Coupe, Barbe, Combos, Soins
+  id          String         @id @default(cuid())
+  nom         String         @unique
+  categorie   String         
   description String
-  duree       Int       // minutes
-  prix        Int       // in FCFA
-  badge       String?   // "Populaire", "Meilleure valeur"
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  duree       Int       
+  badge       String?   
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
   bookings    Booking[]
+  prices      ServicePrice[]
 
   @@index([categorie])
 }
 
-// ============================================
-// Bookings (Reservations)
-// ============================================
+model ServicePrice {
+  id        String     @id @default(cuid())
+  serviceId String
+  service   Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  clientType ClientType
+  prix      Int 
+  instructions String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([serviceId, clientType]) 
+  @@index([serviceId])
+}
 
 model Booking {
   id            String         @id @default(cuid())
@@ -95,17 +104,17 @@ model Booking {
   email         String?
   serviceId     String
   service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  coupeId       String?        // Optional: Quelle coupe réservée?
-  barberIdAssigned String?     // Quel coiffeur fait le RDV?
+  coupeId       String?        
+  barberIdAssigned String?     
   date          DateTime
-  time          String         // "09:00"
+  time          String         
   status        BookingStatus  @default(PENDING)
-  advanceAmount Int            // Advance payment in FCFA
-  totalAmount   Int            // Total price in FCFA
+  advanceAmount Int
+  totalAmount   Int
   notes         String?
-  validatedAt   DateTime?      // Quand confirmé par coiffeur
-  completedAt   DateTime?      // Quand terminé
-  cancelledAt   DateTime?      // Quand annulé
+  validatedAt   DateTime?
+  completedAt   DateTime?
+  cancelledAt   DateTime?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -123,57 +132,44 @@ enum BookingStatus {
   NO_SHOW
 }
 
-// ============================================
-// Clients (Loyalty Program)
-// ============================================
-
 model Client {
   id        String   @id @default(cuid())
   phone     String   @unique
   firstName String
   lastName  String
-  points    Int      @default(0)   // 0-9, 10 = free service
-  totalSpent Int     @default(0)   // Total money spent
+  points    Int      @default(0) 
+  totalSpent Int     @default(0) 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([phone])
 }
 
-// ============================================
-// Inventory & Stock Tracking
-// ============================================
 
 model InventoryLog {
   id        String   @id @default(cuid())
   productId String
   oldStock  Int
   newStock  Int
-  reason    String   // "SALE", "RESTOCK", "DAMAGE", "ADJUSTMENT"
+  reason    String
   createdAt DateTime @default(now())
 
   @@index([productId])
 }
 
-// ============================================
-// Financial Records
-// ============================================
-
 model Invoice {
   id            String   @id @default(cuid())
   bookingId     String   @unique
   amount        Int
-  paymentMethod String   // "CASH", "MOBILE_MONEY", "CARD"
-  status        String   // "PAID", "PENDING", "REFUNDED"
+  paymentMethod String 
+  status        String 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([status])
 }
 
-// ============================================
-// Barber Availability
-// ============================================
+
 
 model BarberAvailability {
   id          String   @id @default(cuid())
