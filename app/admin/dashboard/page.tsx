@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { BarChart3, Users, Package, DollarSign, ShieldPlus, UserPlus } from 'lucide-react';
+import { BarChart3, Users, Package, DollarSign, ShieldPlus, UserPlus, LogOut } from 'lucide-react';
 
 interface DashboardStats {
   bookingsToday: number;
@@ -96,6 +96,10 @@ export default function DashboardPage() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
+
   if (loading || !stats) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bg-base">
@@ -106,13 +110,24 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen pt-32 bg-bg-base text-white">
-      <div className="bg-linear-to-r from-white/5 to-transparent border-b border-white/10 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-2">
-            <ShieldPlus size={24} />
-            <h1 className="text-3xl font-bold">Dashboard Super Admin</h1>
+<div className="bg-linear-to-r from-white/5 to-transparent border-b border-white/10 p-6">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <ShieldPlus size={24} />
+              <h1 className="text-3xl font-bold">Dashboard Super Admin</h1>
+            </div>
+            <p className="text-white/60">Gerez les coiffeurs, la boutique et les coupes.</p>
           </div>
-          <p className="text-white/60">Gérez les coiffeurs, la boutique et les coupes.</p>
+
+          {/* Bouton de déconnexion */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-colors text-sm font-medium self-start sm:self-center"
+          >
+            <LogOut size={16} />
+            Déconnexion
+          </button>
         </div>
       </div>
 

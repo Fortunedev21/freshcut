@@ -116,4 +116,14 @@
     background: rgba(255, 255, 255, 0.05);
     border-color: #FFFFFF;
   }
+
+  .rdp-button:hover:not([disabled]) {
+  background-color: white !important;
+  color: black !important;
 }
+.rdp-day_selected {
+  background-color: white !important;
+  color: black !important;
+  }
+}
+

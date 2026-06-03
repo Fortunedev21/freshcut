@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import Header from "@/components/Header";
 import CartDrawer from "@/components/CartDrawer";
+import Footer from "@/components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +37,7 @@ export default function RootLayout({
           <Header />
           <CartDrawer />
           {children}
+          <Footer/>
         </Providers>
       </body>
     </html>

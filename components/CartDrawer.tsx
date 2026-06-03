@@ -114,9 +114,13 @@ export default function CartDrawer() {
                   <div className="text-[10px] uppercase font-bold text-white/40 tracking-[0.2em]">Total</div>
                   <div className="text-2xl font-bold tracking-tighter">{formatPrice(total)} FCFA</div>
                 </div>
-                <button className="w-full btn-primary py-4 text-xs font-bold uppercase tracking-widest">
-                  Commander maintenant
-                </button>
+<Link 
+  href="/checkout"
+  onClick={() => setIsCartOpen(false)}
+  className="w-full bg-white text-black hover:bg-white/90 transition-colors py-4 text-xs font-bold uppercase tracking-widest block text-center rounded-lg"
+>
+  Commander maintenant
+</Link>
                 <p className="text-[10px] text-center text-white/30 uppercase tracking-widest">
                   Livraison à Cotonou disponible (24h-48h)
                 </p>

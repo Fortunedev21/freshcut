@@ -2,19 +2,54 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import Link from "next/link";
-import { services } from "@/data/services";
 import { faqs } from "@/data/faqs";
 import { formatPrice } from "@/utils/format";
 
+// Définition de l'interface pour typer tes services dynamiques
+interface ServiceData {
+  id: string;
+  nom: string;
+  description: string;
+  prix: number;
+  duree: number;
+  categorie: string;
+  badge?: string;
+}
+
 export default function Services() {
+  // États pour les services de la BD et le chargement
+  const [dbServices, setDbServices] = useState<ServiceData[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [activeCategory, setActiveCategory] = useState("Tout");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const categories = ["Tout", "Coupe", "Barbe", "Soins", "Combos"];
 
+  // Récupération des services depuis l'API
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const response = await fetch("/api/services"); // Ajuste l'URL selon ta route API
+        if (response.ok) {
+          const result = await response.json();
+          // S'adapte si ton API renvoie { data: [...] } ou directement [...]
+          setDbServices(result.data || result);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération des services :", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  // Filtrage basé sur les services de la BD
   const filteredServices = activeCategory === "Tout" 
-    ? services 
-    : services.filter(s => s.categorie === activeCategory);
+    ? dbServices 
+    : dbServices.filter(s => s.categorie === activeCategory);
 
   return (
     <main className="bg-bg-base min-h-screen selection:bg-white selection:text-black">
@@ -65,34 +100,45 @@ export default function Services() {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {filteredServices.map((service) => (
-            <div key={service.id} className="glass-card p-4.5 flex flex-col gap-1.5 h-full group hover:border-white/20 hover:bg-white/[0.07]">
-              <div className="flex justify-between items-start">
-                <h3 className="text-sm font-medium text-white uppercase tracking-tight">{service.nom}</h3>
-                {service.badge && (
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/14 text-white/80 font-bold uppercase tracking-widest">
-                    {service.badge}
+        {loading ? (
+          /* Squelette ou message de chargement */
+          <div className="text-center py-20 text-white/40 text-sm tracking-wide animate-pulse">
+            Chargement de la carte des services...
+          </div>
+        ) : filteredServices.length === 0 ? (
+          <div className="text-center py-20 text-white/40 text-sm">
+            Aucun service disponible dans cette catégorie pour le moment.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+            {filteredServices.map((service) => (
+              <div key={service.id} className="glass-card p-4.5 flex flex-col gap-1.5 h-full group hover:border-white/20 hover:bg-white/[0.07]">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-sm font-medium text-white uppercase tracking-tight">{service.nom}</h3>
+                  {service.badge && (
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-white/14 text-white/80 font-bold uppercase tracking-widest">
+                      {service.badge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[12px] text-white/38 leading-[1.5] line-clamp-2">{service.description}</p>
+                <div className="flex items-center gap-3 mt-1 underline-offset-4">
+                  <span className="text-[11px] text-white/30 font-medium">~{service.duree} min</span>
+                  <span className="w-1 h-1 rounded-full bg-white/10" />
+                  <span className="text-base font-semibold text-white tracking-tight">
+                    {formatPrice(service.prix)} <span className="text-[10px] text-white/30 font-normal uppercase tracking-widest">FCFA</span>
                   </span>
-                )}
+                </div>
+                <Link 
+                  href={"/reserver?service=" + service.id} 
+                  className="mt-auto pt-2.5 border-t border-white/[0.07] text-[11px] text-white/38 hover:text-white/70 transition-colors"
+                >
+                  Réserver ce service →
+                </Link>
               </div>
-              <p className="text-[12px] text-white/38 leading-[1.5] line-clamp-2">{service.description}</p>
-              <div className="flex items-center gap-3 mt-1 underline-offset-4">
-                <span className="text-[11px] text-white/30 font-medium">~{service.duree} min</span>
-                <span className="w-1 h-1 rounded-full bg-white/10" />
-                <span className="text-base font-semibold text-white tracking-tight">
-                  {formatPrice(service.prix)} <span className="text-[10px] text-white/30 font-normal uppercase tracking-widest">FCFA</span>
-                </span>
-              </div>
-              <Link 
-                href={"/reserver?service=" + service.id} 
-                className="mt-auto pt-2.5 border-t border-white/[0.07] text-[11px] text-white/38 hover:text-white/70 transition-colors"
-              >
-                Réserver ce service →
-              </Link>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* 5. FaqSection */}
@@ -137,36 +183,6 @@ export default function Services() {
         <span className="text-[11px] text-white/22 mt-4">Avance de 500 FCFA pour confirmer · Solde réglé au salon</span>
       </section>
 
-      {/* 10. FOOTER */}
-      <footer className="bg-[#080808] border-t border-white/[0.06] pt-16 pb-8 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:flex md:justify-between mb-16 gap-12">
-          <div className="space-y-6">
-            <h4 className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Navigation</h4>
-            <nav className="flex flex-col gap-4">
-              <Link href="/" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">Accueil</Link>
-              <Link href="/services" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">Services</Link>
-              <Link href="/coupes" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">Coupes</Link>
-              <Link href="/boutique" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">Boutique</Link>
-              <Link href="/about" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">À propos</Link>
-              <Link href="/contact" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">Contact</Link>
-              <Link href="/admin" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">Admin</Link>
-            </nav>
-          </div>
-          <div className="space-y-6">
-            <h4 className="text-[10px] uppercase tracking-[0.2em] text-white/40 font-bold">Contact</h4>
-            <div className="flex flex-col gap-4">
-              <a href="#" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">WhatsApp</a>
-              <a href="#" className="text-[11px] text-white/25 hover:text-white/60 transition-colors">Instagram</a>
-              <span className="text-[11px] text-white/25">Zone Résidentielle, Cotonou</span>
-            </div>
-          </div>
-        </div>
-        <div className="pt-8 border-t border-white/[0.06] text-center">
-          <p className="text-[10px] text-white/15 uppercase tracking-[0.3em] font-medium leading-loose max-w-xs mx-auto">
-            © 2026 Freshcut 229 · Tous droits réservés
-          </p>
-        </div>
-      </footer>
     </main>
   );
 }

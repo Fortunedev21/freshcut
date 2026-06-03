@@ -50,7 +50,7 @@ export default function Profile() {
   return (
     <main className="pt-32 px-6 pb-20 min-h-screen max-w-4xl mx-auto space-y-12">
       {/* Header */}
-      <header className="flex justify-between items-end">
+      <div className="flex justify-between items-end">
         <div className="space-y-2">
           <h1 className="text-5xl font-bold uppercase tracking-tighter">Salut !</h1>
           <p className="text-secondary font-medium tracking-wide">Membre Freshcut · {phone}</p>
@@ -64,7 +64,7 @@ export default function Profile() {
         >
           <LogOut size={14} /> Déconnexion
         </button>
-      </header>
+      </div>
 
       {/* Loyalty Card */}
       <section className="glass-card p-10 bg-gradient-to-br from-white/[0.08] to-transparent relative overflow-hidden group">

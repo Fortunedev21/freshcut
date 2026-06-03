@@ -1,23 +1,45 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+
+import { useKKiaPay } from "kkiapay-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { Scissors, Calendar as CalendarIcon, Clock, User, CreditCard, ChevronLeft, CheckCircle2 } from "lucide-react";
+import {
+  Scissors,
+  Calendar as CalendarIcon,
+  Clock,
+  User,
+  CreditCard,
+  ChevronLeft,
+  CheckCircle2,
+  Check,
+} from "lucide-react";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
-import { services as serviceCatalog } from "@/data/services";
-import { COUPES } from "@/data/coupes";
+
+import { DayPicker } from "react-day-picker";
+import "react-day-picker/dist/style.css";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 type SelectedService = {
   id: string;
   nom: string;
   prix: number;
   duree: number;
+  description?: string;
   badge?: string | null;
+};
+
+type CoupeType = {
+  id: string;
+  nom: string;
+  tempsEstimation: string;
+  prix?: number; // Ajouté au cas où tes coupes ont un prix spécifique
 };
 
 interface BookingState {
   step: number;
-  serviceId: string | null;
+  serviceId: string | null; // Gardé pour la rétrocompatibilité ou le cas classique sans coupe
   date: string | null;
   time: string | null;
   client: {
@@ -36,7 +58,10 @@ const SERVICE_SLUG_TO_NAME: Record<string, string> = {
   "soin-visage": "Soin visage",
 };
 
-const TIME_SLOTS = ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+const TIME_SLOTS = [
+  "07:00", "08:00", "09:00", "10:00", "11:00",
+  "14:00", "15:00", "16:00", "17:00", "18:00",
+];
 
 function formatFCA(value: number) {
   return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
@@ -48,11 +73,13 @@ export default function Reserver() {
   const coupeParam = searchParams.get("coupe");
   const serviceParam = searchParams.get("service");
   const phoneParam = searchParams.get("phone");
-  const selectedCoupe = useMemo(() => COUPES.find((coupe) => coupe.id === coupeParam) ?? null, [coupeParam]);
-  const selectedServiceName = useMemo(() => {
-    if (!serviceParam) return null;
-    return SERVICE_SLUG_TO_NAME[serviceParam] ?? serviceParam;
-  }, [serviceParam]);
+
+  const [services, setServices] = useState<SelectedService[]>([]);
+  const [coupes, setCoupes] = useState<CoupeType[]>([]);
+  const [selectedCoupe, setSelectedCoupe] = useState<CoupeType | null>(null);
+  
+  // Nouvel état pour gérer la multi-sélection des services "au choix"
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
 
   const [state, setState] = useState<BookingState>({
     step: 1,
@@ -61,135 +88,256 @@ export default function Reserver() {
     time: null,
     client: { nom: "", prenom: "", telephone: phoneParam ?? "" },
   });
-  const [services, setServices] = useState<SelectedService[]>([]);
+
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   const { addBooking, setPhone, phone } = useLoyalty();
+  const { openKkiapayWidget, addKkiapayListener, removeKkiapayListener } = useKKiaPay();
 
+  const selectedServiceName = useMemo(() => {
+    if (!serviceParam) return null;
+    return SERVICE_SLUG_TO_NAME[serviceParam] ?? serviceParam;
+  }, [serviceParam]);
+
+  // Récupération des services et des coupes en ligne
   useEffect(() => {
-    const loadServices = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("/api/services");
-        if (!response.ok) return;
-
-        const payload = await response.json();
-        const fetchedServices = (payload.data || []) as Array<{ id: string; nom: string; prix: number; duree: number; badge?: string | null }>;
-        setServices(fetchedServices);
-
-        const initialService =
-          fetchedServices.find((service) => service.nom === selectedServiceName) ??
-          fetchedServices[0] ??
-          null;
-
-        if (initialService) {
-          setState((prev) => ({
-            ...prev,
-            serviceId: prev.serviceId ?? initialService.id,
-          }));
+        // 1. Fetch des services
+        const resServices = await fetch("/api/services");
+        let fetchedServices: SelectedService[] = [];
+        if (resServices.ok) {
+          const payload = await resServices.json();
+          fetchedServices = (payload.data || []) as SelectedService[];
+          setServices(fetchedServices);
         }
-      } catch {
-        setServices([]);
+
+        // 2. Fetch des coupes
+        if (coupeParam) {
+          const resCoupes = await fetch("/api/coupes");
+          if (resCoupes.ok) {
+            const payloadCoupes = await resCoupes.json();
+            const fetchedCoupes = (payloadCoupes.data || []) as CoupeType[];
+            setCoupes(fetchedCoupes);
+            
+            const foundCoupe = fetchedCoupes.find((c) => c.id === coupeParam) ?? null;
+            setSelectedCoupe(foundCoupe);
+          }
+        }
+
+        // 3. Logique de sélection initiale automatique (Uniquement si pas de coupe en paramètre)
+        if (!coupeParam && fetchedServices.length > 0) {
+          const initialService = fetchedServices.find((s) => {
+            const targetName = SERVICE_SLUG_TO_NAME[serviceParam ?? ""];
+            if (targetName) {
+              return s.nom.toLowerCase() === targetName.toLowerCase();
+            }
+            return s.id === serviceParam;
+          }) ?? fetchedServices[0];
+
+          if (initialService) {
+            setState((prev) => ({
+              ...prev,
+              serviceId: initialService.id,
+            }));
+            setSelectedServiceIds([initialService.id]);
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des données en ligne :", error);
       }
     };
 
-    loadServices();
-  }, [selectedServiceName]);
+    fetchData();
+  }, [selectedServiceName, coupeParam, serviceParam]);
 
-  useEffect(() => {
-    if (!phoneParam || phone) return;
-    setPhone(phoneParam);
-    setState((prev) => ({ ...prev, client: { ...prev.client, telephone: phoneParam } }));
-  }, [phoneParam, phone, setPhone]);
+  const filteredServices = useMemo(() => {
+    // Si on a une coiffure en param, on laisse le choix parmi TOUS les services additionnels
+    if (coupeParam) return services;
 
-  const nextStep = () => setState(prev => ({ ...prev, step: prev.step + 1 }));
-  const prevStep = () => setState(prev => ({ ...prev, step: prev.step - 1 }));
+    if (serviceParam) {
+      const targetName = SERVICE_SLUG_TO_NAME[serviceParam];
+      return services.filter((s) => {
+        if (targetName) {
+          return s.nom.toLowerCase() === targetName.toLowerCase();
+        }
+        return s.id === serviceParam;
+      });
+    }
+    return services; 
+  }, [services, serviceParam, coupeParam]);
 
-  const handleCancel = () => {
-    setShowCancelModal(false);
-    // Redirige vers l'accueil ou réinitialise
-    window.location.href = "/";
+  // Gestion de la sélection/désélection d'un service
+  const handleServiceToggle = (id: string) => {
+    if (coupeParam) {
+      // Mode au choix (multi-sélection)
+      setSelectedServiceIds((prev) =>
+        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      );
+    } else {
+      // Mode classique (sélection unique et passage au step suivant)
+      setSelectedServiceIds([id]);
+      setState((prev) => ({ ...prev, serviceId: id }));
+      nextStep();
+    }
   };
 
-  const currentService = services.find((service) => service.id === state.serviceId) ?? services[0] ?? null;
+  // Calcul dynamique des prix
+  const totalPrix = useMemo(() => {
+    const prixCoiffure = selectedCoupe?.prix ?? 0; // Remplace par le prix fixe de la coiffure si disponible
+    const prixServices = services
+      .filter((s) => selectedServiceIds.includes(s.id))
+      .reduce((sum, s) => sum + s.prix, 0);
+    return prixCoiffure + prixServices;
+  }, [services, selectedServiceIds, selectedCoupe]);
 
-  useEffect(() => {
-    if (!state.serviceId && currentService) {
-      setState((prev) => ({ ...prev, serviceId: currentService.id }));
-    }
-  }, [state.serviceId, currentService]);
-
-  const selectedServiceDisplay = currentService ?? null;
   const selectedCoupeSummary = selectedCoupe
     ? `${selectedCoupe.nom} · ${selectedCoupe.tempsEstimation}`
     : null;
 
-  const createBooking = async () => {
-    if (!selectedServiceDisplay) return;
+  // Gestion du widget Kkiapay
+  function open() {
+    if (totalPrix === 0) return;
+    openKkiapayWidget({
+      amount: Math.max(500, Math.round(totalPrix * 0.5)),
+      reason: selectedCoupe ? `Avance Réservation ${selectedCoupe.nom}` : `Avance Réservation`,
+      phone: state.client.telephone,
+      name: `${state.client.prenom} ${state.client.nom}`,
+      callback: window.location.origin + "/client",
+      publicAPIKey: process.env.NEXT_PUBLIC_KKIAPAY_PUBLIC_KEY,
+      sandbox: false,
+    });
+  }
 
-    const phoneNumber = state.client.telephone || phone || phoneParam;
-    if (!phoneNumber) {
-      alert("Veuillez renseigner votre numéro de téléphone.");
-      return;
+  function successHandler(response: any) {
+    createBooking(response.transactionId);
+  }
+
+  function failureHandler(error: any) {
+    console.log("Erreur de paiement:", error);
+  }
+
+  useEffect(() => {
+    addKkiapayListener("success", successHandler);
+    addKkiapayListener("failed", failureHandler);
+    return () => {
+      removeKkiapayListener("success");
+      removeKkiapayListener("failed");
+    };
+  }, [addKkiapayListener, removeKkiapayListener, state, totalPrix]);
+
+  // Synchronisation client...
+  useEffect(() => {
+    const activePhone = phone || phoneParam;
+    if (activePhone) {
+      setState((prev) => ({
+        ...prev,
+        client: { ...prev.client, telephone: activePhone },
+      }));
+
+      const fetchAndSetClient = async () => {
+        try {
+          const response = await fetch(`/api/clients?phone=${encodeURIComponent(activePhone)}`);
+          if (response.ok) {
+            const result = await response.json();
+            const clientData = result.data;
+            if (clientData) {
+              setState((prev) => ({
+                ...prev,
+                client: {
+                  ...prev.client,
+                  nom: clientData.lastName,
+                  prenom: clientData.firstName,
+                },
+              }));
+            }
+          }
+        } catch (error) {
+          console.error("Erreur lors de la récupération des données du client:", error);
+        }
+      };
+      fetchAndSetClient();
     }
+  }, [phone, phoneParam]);
 
-    if (!state.client.nom || !state.client.prenom || !state.date || !state.time) {
-      alert("Veuillez compléter votre réservation.");
-      return;
-    }
+  const nextStep = () => setState((prev) => ({ ...prev, step: prev.step + 1 }));
+  const prevStep = () => setState((prev) => ({ ...prev, step: prev.step - 1 }));
 
-    setSubmitting(true);
-    try {
-      const response = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumber,
-          firstName: state.client.prenom,
-          lastName: state.client.nom,
-          serviceId: selectedServiceDisplay.id,
-          ...(selectedCoupe && { coupeId: selectedCoupe.id }),
-          date: state.date,
-          time: state.time,
-          advanceAmount: Math.max(500, Math.round(selectedServiceDisplay.prix * 0.2)),
-          totalAmount: selectedServiceDisplay.prix,
-          notes: selectedCoupe ? `Coiffure choisie: ${selectedCoupe.nom}` : undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Booking creation failed");
-      }
-
-      if (!phone) {
-        setPhone(phoneNumber);
-      }
-
-      addBooking(selectedServiceDisplay.nom, selectedServiceDisplay.prix);
-      alert("Réservation confirmée !");
-      router.push("/client");
-    } catch {
-      alert("Impossible de confirmer la réservation pour le moment.");
-    } finally {
-      setSubmitting(false);
-    }
+  const handleCancel = () => {
+    setShowCancelModal(false);
+    window.location.href = "/";
   };
+
+  const createBooking = useCallback(
+    async (transactionId: string) => {
+      const phoneNumber = state.client.telephone || phone || phoneParam;
+      if (!phoneNumber) {
+        alert("Veuillez renseigner votre numéro de téléphone.");
+        return;
+      }
+
+      if (!state.client.nom || !state.client.prenom || !state.date || !state.time) {
+        alert("Veuillez compléter votre réservation.");
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const response = await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phoneNumber,
+            firstName: state.client.prenom,
+            lastName: state.client.nom,
+            serviceIds: selectedServiceIds, // Envoi de tous les services choisis
+            ...(selectedCoupe && { coupeId: selectedCoupe.id }),
+            date: state.date,
+            time: state.time,
+            advanceAmount: Math.max(500, Math.round(totalPrix * 0.5)),
+            totalAmount: totalPrix,
+            notes: selectedCoupe
+              ? `Coiffure choisie: ${selectedCoupe.nom}; Services: ${selectedServiceIds.join(", ")}; TransactionId: ${transactionId}`
+              : `TransactionId: ${transactionId}`,
+            status: transactionId ? "PAID" : "PENDING",
+          }),
+        });
+
+        if (!response.ok) throw new Error("Booking creation failed");
+
+        if (!phone) setPhone(phoneNumber);
+
+        addBooking(selectedCoupe?.nom || "Services barbiers", totalPrix);
+        alert("Réservation confirmée !");
+        router.push("/client");
+      } catch {
+        alert("Impossible de confirmer la réservation pour le moment.");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [state, selectedServiceIds, selectedCoupe, phone, phoneParam, router, setPhone, addBooking, totalPrix]
+  );
 
   return (
     <main className="pt-32 px-6 pb-20 min-h-screen relative">
       <div className="max-w-xl mx-auto space-y-8">
-        
         {/* Progress Bar */}
         <div className="flex justify-between items-center px-2">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
-                state.step >= i ? "bg-white text-black" : "glass-card text-muted"
-              }`}>
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${
+                  state.step >= i ? "bg-white text-black" : "glass-card text-muted"
+                }`}
+              >
                 {state.step > i ? <CheckCircle2 size={16} /> : i}
               </div>
-              {i < 4 && <div className={`w-12 h-px mx-2 ${state.step > i ? "bg-white" : "bg-glass-border"}`} />}
+              {i < 4 && (
+                <div className={`w-12 h-px mx-2 ${state.step > i ? "bg-white" : "bg-glass-border"}`} />
+              )}
             </div>
           ))}
         </div>
@@ -205,40 +353,68 @@ export default function Reserver() {
               className="space-y-6"
             >
               <div className="text-center space-y-2">
-                <h2 className="text-3xl font-bold uppercase tracking-tighter">Votre Service</h2>
-                <p className="text-secondary text-sm">Choisissez votre expérience Freshcut.</p>
-                {selectedCoupeSummary && (
-                  <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-white/70">
-                    Coiffure choisie: {selectedCoupeSummary}
+                <h2 className="text-3xl font-bold uppercase tracking-tighter">
+                  {coupeParam ? "Services au choix" : "Votre Service"}
+                </h2>
+                <p className="text-secondary text-sm">
+                  {coupeParam 
+                    ? "Personnalisez votre formule en ajoutant des prestations complémentaires." 
+                    : "Choisissez votre expérience Freshcut."}
+                </p>
+                {selectedCoupeSummary && selectedCoupe != null && (
+                  <div className="inline-flex flex-col items-center gap-1 rounded-2xl border border-white/20 bg-white/5 px-5 py-3 text-[11px] uppercase tracking-[0.1em] text-white animate-pulse">
+                    <span className="text-muted text-[9px]">Coiffure mise en avant :</span>
+                    <strong className="text-sm tracking-normal">{selectedCoupe.nom}</strong>
+                    <span className="text-[10px] text-white/60">({selectedCoupe.tempsEstimation})</span>
                   </div>
                 )}
               </div>
+
               <div className="grid gap-4">
-                {serviceCatalog.map((s) => {
-                  const serviceRecord = services.find((service) => service.nom === s.nom);
-                  const resolvedPrice = serviceRecord?.prix ?? s.prix;
-                  const displayPrice = formatFCA(resolvedPrice);
-                  const displayAdvance = formatFCA(Math.max(500, Math.round(resolvedPrice * 0.2)));
+                {filteredServices.map((s) => {
+                  const isSelected = selectedServiceIds.includes(s.id);
+                  const displayPrice = formatFCA(s.prix);
                   return (
-                  <button
-                    key={s.id}
-                    onClick={() => { setState(prev => ({ ...prev, serviceId: serviceRecord?.id ?? prev.serviceId })); nextStep(); }}
-                    className={`glass-card p-6 flex items-center gap-6 text-left hover:border-white/40 transition-all ${state.serviceId === serviceRecord?.id ? "border-white" : ""}`}
-                  >
-                    <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center">
-                      <Scissors size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold uppercase tracking-tight">{s.nom}</h3>
-                      <p className="text-secondary text-xs">{s.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold">{displayPrice}</div>
-                      <div className="text-[10px] text-muted uppercase tracking-widest">Avance {displayAdvance}</div>
-                    </div>
-                  </button>
-                )})}
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleServiceToggle(s.id)}
+                      className={`glass-card p-6 flex items-center gap-6 text-left hover:border-white/40 transition-all ${
+                        isSelected ? "border-white bg-white/5" : ""
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-white text-black" : "bg-white/5 text-white"
+                      }`}>
+                        {isSelected ? <Check size={22} /> : <Scissors size={24} />}
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-bold uppercase tracking-tight">{s.nom}</h3>
+                        <p className="text-secondary text-xs">{s.description || "Aucune description"}</p>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold">{displayPrice}</div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+
+              {/* Bouton Suivant visible uniquement en mode coiffure paramétrée */}
+              {coupeParam && (
+                <div className="pt-4 border-t border-glass-border flex flex-col gap-3">
+                  <div className="flex justify-between items-center px-2">
+                    <span className="text-xs uppercase tracking-widest text-muted font-bold">Estimation actuelle :</span>
+                    <span className="font-bold text-xl text-white">{formatFCA(totalPrix)}</span>
+                  </div>
+                  <button
+                    onClick={nextStep}
+                    className="w-full btn-primary py-4 font-bold uppercase tracking-widest text-xs"
+                  >
+                    Suivant
+                  </button>
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -252,10 +428,16 @@ export default function Reserver() {
               className="space-y-6"
             >
               <div className="flex justify-between items-center">
-                <button onClick={prevStep} className="flex items-center gap-2 text-muted hover:text-white transition-colors text-xs uppercase tracking-widest font-bold">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center gap-2 text-muted hover:text-white transition-colors text-xs uppercase tracking-widest font-bold"
+                >
                   <ChevronLeft size={14} /> Retour
                 </button>
-                <button onClick={() => setShowCancelModal(true)} className="text-muted hover:text-red-400 transition-colors text-[10px] uppercase tracking-widest font-bold">
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="text-muted hover:text-red-400 transition-colors text-[10px] uppercase tracking-widest font-bold"
+                >
                   Annuler la réservation
                 </button>
               </div>
@@ -263,20 +445,21 @@ export default function Reserver() {
                 <h2 className="text-3xl font-bold uppercase tracking-tighter">Disponibilités</h2>
                 <p className="text-secondary text-sm">Le salon est ouvert du Lundi au Samedi.</p>
               </div>
-              
+
               <div className="space-y-8">
-                {/* Simple Day Picker (Next 4 days for demo) */}
-                <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-                  {["Lun 29", "Mar 30", "Mer 01", "Jeu 02"].map((d) => (
-                    <button
-                      key={d}
-                      onClick={() => setState(prev => ({ ...prev, date: d }))}
-                      className={`shrink-0 w-24 h-24 glass-card flex flex-col items-center justify-center gap-2 ${state.date === d ? "bg-white text-black" : ""}`}
-                    >
-                      <CalendarIcon size={20} />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">{d}</span>
-                    </button>
-                  ))}
+                <div className="flex items-center justify-center gap-2 overflow-x-auto pb-4 scrollbar-hide">
+                  <DayPicker
+                    mode="single"
+                    selected={state.date ? new Date(state.date) : undefined}
+                    onSelect={(day) => {
+                      if (day) {
+                        setState((prev) => ({ ...prev, date: format(day, "yyyy-MM-dd") }));
+                      }
+                    }}
+                    locale={fr}
+                    disabled={{ before: new Date() }}
+                    className="glass-card p-4 rounded-xl text-white"
+                  />
                 </div>
 
                 {state.date && (
@@ -284,8 +467,13 @@ export default function Reserver() {
                     {TIME_SLOTS.map((t) => (
                       <button
                         key={t}
-                        onClick={() => { setState(prev => ({ ...prev, time: t })); nextStep(); }}
-                        className={`py-3 glass-card text-xs font-bold uppercase tracking-widest ${state.time === t ? "bg-white text-black" : ""}`}
+                        onClick={() => {
+                          setState((prev) => ({ ...prev, time: t }));
+                          nextStep();
+                        }}
+                        className={`py-3 glass-card text-xs font-bold uppercase tracking-widest ${
+                          state.time === t ? "bg-white text-black" : ""
+                        }`}
                       >
                         {t}
                       </button>
@@ -306,10 +494,16 @@ export default function Reserver() {
               className="space-y-6"
             >
               <div className="flex justify-between items-center">
-                <button onClick={prevStep} className="flex items-center gap-2 text-muted hover:text-white transition-colors text-xs uppercase tracking-widest font-bold">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center gap-2 text-muted hover:text-white transition-colors text-xs uppercase tracking-widest font-bold"
+                >
                   <ChevronLeft size={14} /> Retour
                 </button>
-                <button onClick={() => setShowCancelModal(true)} className="text-muted hover:text-red-400 transition-colors text-[10px] uppercase tracking-widest font-bold">
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="text-muted hover:text-red-400 transition-colors text-[10px] uppercase tracking-widest font-bold"
+                >
                   Annuler la réservation
                 </button>
               </div>
@@ -322,36 +516,51 @@ export default function Reserver() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Nom</label>
-                    <input 
+                    <input
                       type="text"
                       className="w-full bg-glass-bg border border-glass-border p-4 rounded-xl focus:border-white transition-colors outline-none"
                       placeholder="Doe"
                       value={state.client.nom}
-                      onChange={(e) => setState(prev => ({ ...prev, client: { ...prev.client, nom: e.target.value } }))}
+                      onChange={(e) =>
+                        setState((prev) => ({
+                          ...prev,
+                          client: { ...prev.client, nom: e.target.value },
+                        }))
+                      }
                     />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Prénom</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       className="w-full bg-glass-bg border border-glass-border p-4 rounded-xl focus:border-white transition-colors outline-none"
                       placeholder="John"
                       value={state.client.prenom}
-                      onChange={(e) => setState(prev => ({ ...prev, client: { ...prev.client, prenom: e.target.value } }))}
+                      onChange={(e) =>
+                        setState((prev) => ({
+                          ...prev,
+                          client: { ...prev.client, prenom: e.target.value },
+                        }))
+                      }
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Téléphone (MTN/Moov)</label>
-                  <input 
-                    type="tel" 
+                  <input
+                    type="tel"
                     className="w-full bg-glass-bg border border-glass-border p-4 rounded-xl focus:border-white transition-colors outline-none"
                     placeholder="+229 XX XX XX XX"
                     value={state.client.telephone}
-                    onChange={(e) => setState(prev => ({ ...prev, client: { ...prev.client, telephone: e.target.value } }))}
+                    onChange={(e) =>
+                      setState((prev) => ({
+                        ...prev,
+                        client: { ...prev.client, telephone: e.target.value },
+                      }))
+                    }
                   />
                 </div>
-                <button 
+                <button
                   disabled={!state.client.nom || !state.client.telephone}
                   onClick={nextStep}
                   className="w-full btn-primary mt-4 disabled:opacity-50 disabled:cursor-not-allowed group flex items-center justify-center gap-2"
@@ -371,10 +580,16 @@ export default function Reserver() {
               className="space-y-8"
             >
               <div className="flex justify-between items-center">
-                <button onClick={prevStep} className="flex items-center gap-2 text-muted hover:text-white transition-colors text-xs uppercase tracking-widest font-bold">
+                <button
+                  onClick={prevStep}
+                  className="flex items-center gap-2 text-muted hover:text-white transition-colors text-xs uppercase tracking-widest font-bold"
+                >
                   <ChevronLeft size={14} /> Retour
                 </button>
-                <button onClick={() => setShowCancelModal(true)} className="text-muted hover:text-red-400 transition-colors text-[10px] uppercase tracking-widest font-bold">
+                <button
+                  onClick={() => setShowCancelModal(true)}
+                  className="text-muted hover:text-red-400 transition-colors text-[10px] uppercase tracking-widest font-bold"
+                >
                   Annuler la réservation
                 </button>
               </div>
@@ -382,36 +597,45 @@ export default function Reserver() {
               <div className="glass-card p-8 space-y-6">
                 <div className="flex justify-between items-start border-b border-glass pb-6">
                   <div className="space-y-1">
-                    <div className="text-[10px] uppercase tracking-widest text-muted">Service</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted">Formule</div>
                     <div className="font-bold text-xl uppercase tracking-tighter">
-                      {selectedServiceDisplay?.nom}
+                      {selectedCoupe ? selectedCoupe.nom : (services.find(s => s.id === state.serviceId)?.nom || "Sur-mesure")}
                     </div>
                   </div>
                   <div className="text-right space-y-1">
                     <div className="text-[10px] uppercase tracking-widest text-muted">Date & Heure</div>
-                    <div className="font-bold uppercase tracking-tighter">{state.date} @ {state.time}</div>
+                    <div className="font-bold uppercase tracking-tighter">
+                      {state.date} @ {state.time}
+                    </div>
                   </div>
                 </div>
 
-                {selectedCoupeSummary && (
-                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-2">
-                    <div className="text-[10px] uppercase tracking-widest text-muted">Coiffure sélectionnée</div>
-                    <div className="font-semibold uppercase tracking-tight">{selectedCoupeSummary}</div>
+                {/* Liste des extras sélectionnés */}
+                {coupeParam && selectedServiceIds.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[10px] uppercase tracking-widest text-muted">Services additionnels</div>
+                    <div className="flex flex-wrap gap-2">
+                      {services.filter(s => selectedServiceIds.includes(s.id)).map(s => (
+                        <span key={s.id} className="text-[11px] bg-white/10 px-3 py-1 rounded-full border border-white/5">
+                          {s.nom} ({formatFCA(s.prix)})
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
                 <div className="space-y-4 uppercase tracking-widest text-[10px] font-bold">
                   <div className="flex justify-between text-secondary">
-                    <span>Total Service</span>
-                    <span>{selectedServiceDisplay ? formatFCA(selectedServiceDisplay.prix) : "—"}</span>
+                    <span>Prix Total</span>
+                    <span>{formatFCA(totalPrix)}</span>
                   </div>
                   <div className="flex justify-between text-white text-sm">
-                    <span>Avance à payer (Maintenant)</span>
-                    <span>{selectedServiceDisplay ? formatFCA(Math.max(500, Math.round(selectedServiceDisplay.prix * 0.2))) : "—"}</span>
+                    <span>Avance à payer (50%)</span>
+                    <span>{formatFCA(Math.max(500, Math.round(totalPrix * 0.5)))}</span>
                   </div>
                 </div>
 
-                <button 
+                <button
                   onClick={() => setShowConfirmModal(true)}
                   className="w-full btn-primary flex items-center justify-center gap-3 py-6 group"
                 >
@@ -419,7 +643,8 @@ export default function Reserver() {
                   <CreditCard size={24} className="group-hover:rotate-12 transition-transform" />
                 </button>
                 <p className="text-[9px] text-center text-muted uppercase tracking-[0.2em] leading-relaxed px-4">
-                  En payant l'avance, vous confirmez votre présence. <br />Le solde sera réglé au salon.
+                  En payant l'avance, vous confirmez votre présence. <br />
+                  Le solde sera réglé au salon.
                 </p>
               </div>
             </motion.div>
@@ -431,7 +656,7 @@ export default function Reserver() {
       <AnimatePresence>
         {showConfirmModal && (
           <div className="fixed inset-0 z-100 flex items-center justify-center p-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -451,8 +676,10 @@ export default function Reserver() {
 
               <div className="space-y-4 divide-y divide-white/5">
                 <div className="pt-0">
-                  <div className="text-[10px] uppercase font-bold text-muted tracking-widest mb-1">Service</div>
-                  <div className="text-sm font-medium">{selectedServiceDisplay?.nom} — {selectedServiceDisplay ? formatFCA(selectedServiceDisplay.prix) : "—"}</div>
+                  <div className="text-[10px] uppercase font-bold text-muted tracking-widest mb-1">Détails Tarifs</div>
+                  <div className="text-sm font-medium">
+                    Total : {formatFCA(totalPrix)}
+                  </div>
                 </div>
                 <div className="pt-4">
                   <div className="text-[10px] uppercase font-bold text-muted tracking-widest mb-1">Rendez-vous</div>
@@ -465,7 +692,7 @@ export default function Reserver() {
                 </div>
                 {selectedCoupeSummary && (
                   <div className="pt-4">
-                    <div className="text-[10px] uppercase font-bold text-muted tracking-widest mb-1">Coiffure</div>
+                    <div className="text-[10px] uppercase font-bold text-muted tracking-widest mb-1">Coiffure principale</div>
                     <div className="text-sm font-medium">{selectedCoupeSummary}</div>
                   </div>
                 )}
@@ -474,19 +701,21 @@ export default function Reserver() {
               <div className="bg-white/5 p-4 rounded-xl space-y-2">
                 <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest">
                   <span className="text-muted">À payer immédiatement</span>
-                  <span className="text-white">{selectedServiceDisplay ? formatFCA(Math.max(500, Math.round(selectedServiceDisplay.prix * 0.2))) : "—"}</span>
+                  <span className="text-white">
+                    {formatFCA(Math.max(500, Math.round(totalPrix * 0.5)))}
+                  </span>
                 </div>
               </div>
 
               <div className="flex flex-col gap-3">
-                <button 
-                  onClick={createBooking}
+                <button
+                  onClick={open}
                   disabled={submitting}
                   className="btn-primary w-full py-4 text-xs font-bold disabled:opacity-50"
                 >
-                  {submitting ? "Confirmation..." : "Confirmer sans paiement"}
+                  {submitting ? "Confirmation..." : "Confirmer"}
                 </button>
-                <button 
+                <button
                   onClick={() => setShowConfirmModal(false)}
                   className="btn-secondary w-full py-4 text-xs font-bold"
                 >
@@ -496,10 +725,11 @@ export default function Reserver() {
             </motion.div>
           </div>
         )}
+
         {/* Cancellation Confirmation Modal */}
         {showCancelModal && (
           <div className="fixed inset-0 z-110 flex items-center justify-center p-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -525,13 +755,13 @@ export default function Reserver() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={handleCancel}
                   className="bg-red-500 text-white w-full py-4 rounded-full text-xs font-bold uppercase tracking-widest hover:bg-red-600 transition-colors"
                 >
                   Oui, annuler
                 </button>
-                <button 
+                <button
                   onClick={() => setShowCancelModal(false)}
                   className="btn-secondary w-full py-4 text-xs font-bold uppercase tracking-widest border-white/10"
                 >
