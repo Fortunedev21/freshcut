@@ -6,6 +6,7 @@ import { Instagram, Heart, MessageCircle, ExternalLink } from "lucide-react";
 import { services, testimonials, galleryPhotos } from "@/data/siteData";
 import { COUPES } from "@/data/coupes";
 import { formatPrice } from "@/utils/format";
+import BoutiquePreview from "@/components/BoutiquePreview";
 
 export default function Home() {
 
@@ -78,7 +79,7 @@ const stagger = (i: number) => ({
         <div className="absolute bottom-0 w-full border-t border-white/[0.08] px-6 py-8">
           <div className="max-w-7xl mx-auto grid grid-cols-3 gap-4">
             {[
-              { val: "500+", label: "Clients" },
+              { val: "50+", label: "Clients" },
               { val: "4.9", label: "Note moyenne" },
               { val: "3 ans", label: "D'expérience" }
             ].map((stat, i) => (
@@ -257,34 +258,7 @@ const stagger = (i: number) => ({
 
       {/* 8. BOUTIQUE PREVIEW */}
       <section className="py-16 px-5 max-w-7xl mx-auto w-full">
-        <div className="flex justify-between items-end mb-10">
-          <div>
-            <h2 className="text-[11px] uppercase tracking-[0.12em] text-white/35 font-medium">Boutique</h2>
-            <p className="text-[12px] text-white/35 mt-2">Cosmétiques & Merchandising</p>
-          </div>
-          <Link href="/boutique" className="text-[11px] text-white/30 hover:text-white transition-colors font-medium uppercase tracking-widest">Voir tout →</Link>
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { nom: "Huile Barbe Signature", prix: 12500 },
-            { nom: "Cire Coiffante Mate", prix: 8500 },
-            { nom: "Peigne en Corne", prix: 5000 }
-          ].map((item, i) => (
-            <div key={i} className="group cursor-pointer">
-              <div className="aspect-square glass-card mb-4 overflow-hidden border-white/5 relative">
-                <div className="w-full h-full bg-gradient-to-br from-white/5 to-transparent transition-transform duration-700 group-hover:scale-110" />
-                <div className="absolute inset-0 flex items-center justify-center opacity-10">
-                   <div className="w-16 h-16 border border-white rotate-45" />
-                </div>
-              </div>
-              <div className="text-[12px] font-medium text-white mb-2 uppercase tracking-tight">{item.nom}</div>
-              <div className="flex justify-between items-center">
-                <span className="text-[13px] font-semibold text-white/70 tracking-tight">{formatPrice(item.prix)} FCFA</span>
-                <button className="text-[9px] uppercase tracking-[0.15em] font-bold text-white/40 border border-white/10 rounded-full px-3 py-1 hover:bg-white hover:text-black hover:border-white transition-all">Ajouter</button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <BoutiquePreview/>
       </section>
     </div>
   );

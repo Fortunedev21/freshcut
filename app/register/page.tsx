@@ -36,11 +36,9 @@ export default function ClientLoginPage() {
         return;
       }
 
-      // Save phone to localStorage
       localStorage.setItem('clientPhone', phone.trim());
       localStorage.setItem('clientName', firstName || 'Client');
 
-      // Redirect to client dashboard
       router.push('/client');
     } catch (err) {
       setError('Une erreur est survenue');
@@ -50,7 +48,7 @@ export default function ClientLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4 pt-32 sm:pt-0">
       <div className="w-full max-w-md">
         <div className="glass-card p-8 rounded-xl border flex flex-col border-white/10">
           <Link href="/" className="flex items-center gap-2 group w-full justify-center">

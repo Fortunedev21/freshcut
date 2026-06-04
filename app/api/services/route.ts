@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
 
     return successResponse(services);
   } catch (error) {
+    console.error("❌ ERREUR CRITIQUE DANS GET /api/services :", error);
     return errorResponse('Failed to fetch services', 500);
   }
 }
@@ -64,6 +65,7 @@ export async function POST(request: NextRequest) {
 
     return successResponse(service, 'Service created', 201);
   } catch (error: any) {
+    console.error("❌ ERREUR CRITIQUE DANS POST /api/services :", error);
     if (error.message === 'Forbidden') return errorResponse('Forbidden', 403);
     if (error.message === 'Unauthorized') return errorResponse('Unauthorized', 401);
     return errorResponse('Failed to create service', 500);

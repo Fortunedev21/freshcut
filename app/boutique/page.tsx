@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useCart } from "@/contexts/CartContext";
-import { PRODUCTS } from "@/data/boutique";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/utils/format";
 
@@ -12,8 +11,10 @@ type CategorieProduit = "BARBE" | "CHEVEUX" | "ACCESSOIRES" | "MERCHANDISING";
 interface Product {
   id: string;
   nom: string;
-  categorie: CategorieProduit;
+  categorie: string; // Doit matcher le modèle Prisma (String)
   prix: number;
+  description: string;
+  image: string | null;
 }
 
 const CATEGORIES: { id: CategorieProduit | "TOUT"; label: string }[] = [
@@ -26,18 +27,40 @@ const CATEGORIES: { id: CategorieProduit | "TOUT"; label: string }[] = [
 
 export default function Boutique() {
   const [activeCategory, setActiveCategory] = useState<CategorieProduit | "TOUT">("TOUT");
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { addToCart } = useCart();
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
+    async function getProducts() {
+      try {
+        const res = await fetch("/api/products");
+        if (!res.ok) throw new Error("Échec du chargement");
+        
+        const data = await res.json();
+        
+        // Sécurisation selon le format de réponse de ton API
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else if (data && Array.isArray(data.products)) {
+          setProducts(data.products);
+        } else if (data && Array.isArray(data.data)) {
+          setProducts(data.data);
+        }
+      } catch (error) {
+        console.error("Erreur Fetch Boutique:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    getProducts();
   }, []);
 
+  // Filtrage basé sur les données reçues de l'API (Rend les catégories insensibles à la casse au cas où)
   const filteredProducts = activeCategory === "TOUT" 
-    ? PRODUCTS 
-    : PRODUCTS.filter(p => p.categorie === activeCategory);
+    ? products 
+    : products.filter(p => p.categorie?.toUpperCase() === activeCategory);
 
   return (
     <main className="pt-32 px-6 max-w-7xl mx-auto pb-20">
@@ -72,7 +95,6 @@ export default function Boutique() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           <AnimatePresence mode="popLayout" initial={false}>
             {isLoading ? (
-              // Skeletons lors du premier chargement
               Array.from({ length: 4 }).map((_, i) => (
                 <motion.div 
                   key={`skeleton-${i}`}
@@ -92,8 +114,11 @@ export default function Boutique() {
                   </div>
                 </motion.div>
               ))
+            ) : filteredProducts.length === 0 ? (
+              <div className="col-span-full text-center py-12 text-muted text-sm uppercase tracking-wider">
+                Aucun produit dans cette catégorie
+              </div>
             ) : (
-              // Produits avec animation Layout
               filteredProducts.map((product) => (
                 <motion.div
                   layout
@@ -108,19 +133,23 @@ export default function Boutique() {
                   className="glass-card aspect-[3/4] p-6 flex flex-col group cursor-pointer"
                   onClick={() => router.push(`/boutique/${product.id}`)}
                 >
-                  <div className="flex-1 flex items-center justify-center opacity-20 group-hover:opacity-40 transition-opacity">
-                    <div className="w-24 h-24 border border-white/20 rotate-45" />
+                  <div className="flex-1 flex items-center justify-center relative overflow-hidden">
+                    {product.image ? (
+                      <img src={product.image} alt={product.nom} className="w-full h-full object-cover rounded transition-transform duration-500 group-hover:scale-105" />
+                    ) : (
+                      <div className="w-24 h-24 border border-white/20 rotate-45 opacity-20 group-hover:opacity-40 transition-opacity" />
+                    )}
                   </div>
                   
                   <div className="mt-4 space-y-2">
                     <div className="text-[10px] font-bold uppercase tracking-widest text-muted">{product.categorie}</div>
-                    <h3 className="font-bold uppercase tracking-tight text-lg leading-tight group-hover:text-white transition-colors">{product.nom}</h3>
+                    <h3 className="font-bold uppercase tracking-tight text-lg leading-tight group-hover:text-white transition-colors line-clamp-1">{product.nom}</h3>
                     <div className="pt-4 border-t border-white/[0.08] flex justify-between items-center">
                       <span className="font-bold text-xl">{formatPrice(product.prix)} FCFA</span>
                       <button 
                         onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(product);
+                          e.stopPropagation(); // Stop redirection
+                          addToCart({ id: product.id, nom: product.nom, categorie: product.categorie, prix: product.prix });
                         }}
                         className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all"
                       >

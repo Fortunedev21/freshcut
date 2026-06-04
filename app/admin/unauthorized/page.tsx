@@ -18,11 +18,11 @@ export default function Unauthorized() {
           Vous n'avez pas les permissions pour accéder à cette page.
         </p>
 
-        {session && (
+        {/*session && (
           <p className="text-white/40 text-sm mb-6">
             Votre rôle: <span className="font-semibold text-white">{(session.user as any)?.role}</span>
           </p>
-        )}
+        )*/}
 
         <div className="space-y-3">
           <Link

@@ -16,15 +16,14 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/admin/coiffeur', request.url))
     }
 
-    const isBoss = pathname.startsWith('/admin/boss')
-    const isCoiffeur = pathname.startsWith('/admin/coiffeur')
-
-    if (isBoss && userRole !== 'BOSS' && userRole !== 'ADMIN') {
+    if (pathname.startsWith('/admin/boss') && userRole !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/admin/unauthorized', request.url))
     }
 
-    if (isCoiffeur && userRole !== 'COIFFEUR' && userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/admin/unauthorized', request.url))
+    if (pathname.startsWith('/admin/coiffeur')) {
+      if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
+        return NextResponse.redirect(new URL('/admin/unauthorized', request.url))
+      }
     }
   }
 

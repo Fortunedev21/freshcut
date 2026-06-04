@@ -6,8 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Scissors,
-  Calendar as CalendarIcon,
-  Clock,
   User,
   CreditCard,
   ChevronLeft,
@@ -21,13 +19,21 @@ import "react-day-picker/dist/style.css";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
+// 1. Mise à jour des interfaces pour intégrer la grille tarifaire relationnelle
+interface ServicePriceData {
+  id: string;
+  clientType: "ADULTE" | "ETUDIANT" | "ENFANT";
+  prix: number;
+  instructions?: string;
+}
+
 type SelectedService = {
   id: string;
   nom: string;
-  prix: number;
   duree: number;
   description?: string;
   badge?: string | null;
+  prices: ServicePriceData[]; // 👈 Ajout du tableau des tarifs
 };
 
 type CoupeType = {
@@ -73,12 +79,17 @@ export default function Reserver() {
   const coupeParam = searchParams.get("coupe");
   const serviceParam = searchParams.get("service");
   const phoneParam = searchParams.get("phone");
+  
+  // Récupération sécurisée de la variante tarifaire depuis l'URL passée par la page services
+  const urlClientType = (searchParams.get("type")?.toUpperCase() as "ADULTE" | "ETUDIANT" | "ENFANT") || "ADULTE";
 
   const [services, setServices] = useState<SelectedService[]>([]);
   const [coupes, setCoupes] = useState<CoupeType[]>([]);
   const [selectedCoupe, setSelectedCoupe] = useState<CoupeType | null>(null);
+  const [loading, setLoading] = useState(true);
   
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
+  const [clientType] = useState<"ADULTE" | "ETUDIANT" | "ENFANT">(urlClientType);
 
   const [state, setState] = useState<BookingState>({
     step: 1,
@@ -103,8 +114,8 @@ export default function Reserver() {
   // Récupération des services et des coupes en ligne
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true); 
       try {
-        // 1. Fetch des services
         const resServices = await fetch("/api/services");
         let fetchedServices: SelectedService[] = [];
         if (resServices.ok) {
@@ -113,7 +124,6 @@ export default function Reserver() {
           setServices(fetchedServices);
         }
 
-        // 2. Fetch des coupes
         if (coupeParam) {
           const resCoupes = await fetch("/api/coupes");
           if (resCoupes.ok) {
@@ -126,7 +136,6 @@ export default function Reserver() {
           }
         }
 
-        // 3. Logique de sélection initiale automatique (Uniquement si pas de coupe en paramètre)
         if (!coupeParam && fetchedServices.length > 0) {
           const initialService = fetchedServices.find((s) => {
             const targetName = SERVICE_SLUG_TO_NAME[serviceParam ?? ""];
@@ -146,6 +155,8 @@ export default function Reserver() {
         }
       } catch (error) {
         console.error("Erreur lors du chargement des données en ligne :", error);
+      } finally {
+        setLoading(false); 
       }
     };
 
@@ -153,7 +164,6 @@ export default function Reserver() {
   }, [selectedServiceName, coupeParam, serviceParam]);
 
   const filteredServices = useMemo(() => {
-    // Si on a une coiffure en param, on laisse le choix parmi TOUS les services additionnels
     if (coupeParam) return services;
 
     if (serviceParam) {
@@ -180,23 +190,46 @@ export default function Reserver() {
     }
   };
 
+  /**
+   * Helper pour extraire de manière sécurisée le prix d'un service selon le profil client sélectionné.
+   * Si le profil spécifique n'existe pas, il prend le tarif ADULTE par défaut.
+   */
+  const getServicePrice = (service: SelectedService, type: typeof clientType): number => {
+    if (!service.prices || service.prices.length === 0) return 0;
+    const targetPrice = service.prices.find((p) => p.clientType === type);
+    if (targetPrice) return targetPrice.prix;
+    return service.prices.find((p) => p.clientType === "ADULTE")?.prix || 0;
+  };
+
+  // 2. Calcul dynamique et corrigé du montant total
   const totalPrix = useMemo(() => {
     const prixCoiffure = selectedCoupe?.prix ?? 0;
     const prixServices = services
       .filter((s) => selectedServiceIds.includes(s.id))
-      .reduce((sum, s) => sum + s.prix, 0);
+      .reduce((sum, s) => sum + getServicePrice(s, clientType), 0); // 👈 Utilisation du helper à la place de s.prix
     return prixCoiffure + prixServices;
-  }, [services, selectedServiceIds, selectedCoupe]);
+  }, [services, selectedServiceIds, selectedCoupe, clientType]);
 
   const selectedCoupeSummary = selectedCoupe
     ? `${selectedCoupe.nom} · ${selectedCoupe.tempsEstimation}`
     : null;
 
-  // Gestion du widget Kkiapay
+  const advanceAmount = useMemo(() => {
+    return Math.max(500, Math.round(totalPrix * 0.5));
+  }, [totalPrix]);
+
   function open() {
     if (totalPrix === 0) return;
+    
+    if (!state.client.nom || !state.client.prenom || !state.date || !state.time) {
+      alert("Veuillez remplir correctement toutes vos informations avant de procéder au paiement.");
+      setShowConfirmModal(false);
+      setState(prev => ({ ...prev, step: 3 }));
+      return;
+    }
+
     openKkiapayWidget({
-      amount: Math.max(500, Math.round(totalPrix * 0.5)),
+      amount: advanceAmount,
       reason: selectedCoupe ? `Avance Réservation ${selectedCoupe.nom}` : `Avance Réservation`,
       phone: state.client.telephone,
       name: `${state.client.prenom} ${state.client.nom}`,
@@ -211,7 +244,7 @@ export default function Reserver() {
   }
 
   function failureHandler(error: any) {
-    console.log("Erreur de paiement:", error);
+    console.error("Erreur de paiement:", error);
   }
 
   useEffect(() => {
@@ -221,9 +254,8 @@ export default function Reserver() {
       removeKkiapayListener("success");
       removeKkiapayListener("failed");
     };
-  }, [addKkiapayListener, removeKkiapayListener, state, totalPrix]);
+  }, [addKkiapayListener, removeKkiapayListener, state, totalPrix, successHandler]);
 
-  // Synchronisation client...
   useEffect(() => {
     const activePhone = phone || phoneParam;
     if (activePhone) {
@@ -287,15 +319,16 @@ export default function Reserver() {
             phoneNumber,
             firstName: state.client.prenom,
             lastName: state.client.nom,
-            serviceIds: selectedServiceIds, // Envoi de tous les services choisis
+            serviceIds: selectedServiceIds,
+            clientType, // On sauvegarde la variante choisie en base de données
             ...(selectedCoupe && { coupeId: selectedCoupe.id }),
             date: state.date,
             time: state.time,
-            advanceAmount: Math.max(500, Math.round(totalPrix * 0.5)),
+            advanceAmount: advanceAmount,
             totalAmount: totalPrix,
             notes: selectedCoupe
-              ? `Coiffure choisie: ${selectedCoupe.nom}; Services: ${selectedServiceIds.join(", ")}; TransactionId: ${transactionId}`
-              : `TransactionId: ${transactionId}`,
+              ? `Coiffure choisie: ${selectedCoupe.nom}; Services: ${selectedServiceIds.join(", ")}; TransactionId: ${transactionId}; Profil: ${clientType.toLowerCase()}`
+              : `TransactionId: ${transactionId}; Profil: ${clientType.toLowerCase()}`,
             status: transactionId ? "PAID" : "PENDING",
           }),
         });
@@ -313,7 +346,7 @@ export default function Reserver() {
         setSubmitting(false);
       }
     },
-    [state, selectedServiceIds, selectedCoupe, phone, phoneParam, router, setPhone, addBooking, totalPrix]
+    [state, selectedServiceIds, selectedCoupe, phone, phoneParam, router, setPhone, addBooking, totalPrix, advanceAmount, clientType]
   );
 
   return (
@@ -363,39 +396,51 @@ export default function Reserver() {
                     <span className="text-[10px] text-white/60">({selectedCoupe.tempsEstimation})</span>
                   </div>
                 )}
+                {/* Petit indicateur discret du profil tarifaire actif */}
+                <div className="text-[10px] uppercase tracking-widest text-white/40 font-medium">
+                  Grille tarifaire appliquée : <span className="text-white font-bold">{clientType.toLowerCase()}</span>
+                </div>
               </div>
 
               <div className="grid gap-4">
-                {filteredServices.map((s) => {
-                  const isSelected = selectedServiceIds.includes(s.id);
-                  const displayPrice = formatFCA(s.prix);
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => handleServiceToggle(s.id)}
-                      className={`glass-card p-6 flex items-center gap-6 text-left hover:border-white/40 transition-all ${
-                        isSelected ? "border-white bg-white/5" : ""
-                      }`}
-                    >
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                        isSelected ? "bg-white text-black" : "bg-white/5 text-white"
-                      }`}>
-                        {isSelected ? <Check size={22} /> : <Scissors size={24} />}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold uppercase tracking-tight">{s.nom}</h3>
-                        <p className="text-secondary text-xs">{s.description || "Aucune description"}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">{displayPrice}</div>
-                      </div>
-                    </button>
-                  );
-                })}
+                {loading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="glass-card p-6 h-24 w-full animate-pulse bg-white/5 border-glass-border" />
+                  ))
+                ) : filteredServices.length === 0 ? (
+                  <p className="text-center text-muted text-sm py-8">Aucun service disponible pour le moment.</p>
+                ) : (
+                  filteredServices.map((s) => {
+                    const isSelected = selectedServiceIds.includes(s.id);
+                    // 3. Affichage correct du prix selon la variante sur la ligne
+                    const displayPrice = formatFCA(getServicePrice(s, clientType));
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => handleServiceToggle(s.id)}
+                        className={`glass-card p-6 flex items-center gap-6 text-left hover:border-white/40 transition-all ${
+                          isSelected ? "border-white bg-white/5" : ""
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                          isSelected ? "bg-white text-black" : "bg-white/5 text-white"
+                        }`}>
+                          {isSelected ? <Check size={22} /> : <Scissors size={24} />}
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold uppercase tracking-tight">{s.nom}</h3>
+                          <p className="text-secondary text-xs">{s.description || "Aucune description"}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold">{displayPrice}</div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
               </div>
 
-              {/* Bouton Suivant visible uniquement en mode coiffure paramétrée */}
               {coupeParam && (
                 <div className="pt-4 border-t border-glass-border flex flex-col gap-3">
                   <div className="flex justify-between items-center px-2">
@@ -605,14 +650,13 @@ export default function Reserver() {
                   </div>
                 </div>
 
-                {/* Liste des extras sélectionnés */}
                 {coupeParam && selectedServiceIds.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-[10px] uppercase tracking-widest text-muted">Services additionnels</div>
                     <div className="flex flex-wrap gap-2">
                       {services.filter(s => selectedServiceIds.includes(s.id)).map(s => (
                         <span key={s.id} className="text-[11px] bg-white/10 px-3 py-1 rounded-full border border-white/5">
-                          {s.nom} ({formatFCA(s.prix)})
+                          {s.nom} ({formatFCA(getServicePrice(s, clientType))})
                         </span>
                       ))}
                     </div>
@@ -621,12 +665,12 @@ export default function Reserver() {
 
                 <div className="space-y-4 uppercase tracking-widest text-[10px] font-bold">
                   <div className="flex justify-between text-secondary">
-                    <span>Prix Total</span>
+                    <span>Prix Total ({clientType.toLowerCase()})</span>
                     <span>{formatFCA(totalPrix)}</span>
                   </div>
                   <div className="flex justify-between text-white text-sm">
                     <span>Avance à payer (50%)</span>
-                    <span>{formatFCA(Math.max(500, Math.round(totalPrix * 0.5)))}</span>
+                    <span>{formatFCA(advanceAmount)}</span>
                   </div>
                 </div>
 
@@ -673,7 +717,7 @@ export default function Reserver() {
                 <div className="pt-0">
                   <div className="text-[10px] uppercase font-bold text-muted tracking-widest mb-1">Détails Tarifs</div>
                   <div className="text-sm font-medium">
-                    Total : {formatFCA(totalPrix)}
+                    Total ({clientType.toLowerCase()}) : {formatFCA(totalPrix)}
                   </div>
                 </div>
                 <div className="pt-4">
@@ -697,7 +741,7 @@ export default function Reserver() {
                 <div className="flex justify-between items-center text-[11px] font-bold uppercase tracking-widest">
                   <span className="text-muted">À payer immédiatement</span>
                   <span className="text-white">
-                    {formatFCA(Math.max(500, Math.round(totalPrix * 0.5)))}
+                    {formatFCA(advanceAmount)}
                   </span>
                 </div>
               </div>

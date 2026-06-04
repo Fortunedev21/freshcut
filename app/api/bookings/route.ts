@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { getServerSession, requireRole } from '@/lib/auth';
+import { resend } from '@/lib/resend';
+import { formatPrice } from '@/utils/format';
 
 // GET all bookings (ADMIN only) or filter by phone (public)
 export async function GET(request: NextRequest) {
@@ -80,7 +82,6 @@ export async function POST(request: NextRequest) {
       return errorResponse('Missing required fields', 400);
     }
 
-    // Verify service exists
     const service = await prisma.service.findUnique({
       where: { id: serviceId },
     });
@@ -126,6 +127,49 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    const barbers = await prisma.user.findMany({
+      where: {
+        role: 'ADMIN',
+      },
+      select: {
+        email: true,
+      },
+    });
+
+    const barberEmails = barbers.map((b) => b.email);
+
+    if (barberEmails.length > 0) {
+      const formattedDate = new Date(booking.date).toLocaleDateString('fr-FR');
+
+      await resend.emails.send({
+        from: 'Freshcut 229 <onboarding@resend.dev>',
+        to: barberEmails,
+        subject: `💈 Nouvelle Réservation - ${booking.firstName} ${booking.lastName}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #121212; color: #ffffff; border-radius: 8px;">
+            <h2 style="border-bottom: 1px solid #222; padding-bottom: 10px; color: #ffffff; text-transform: uppercase; tracking: tight;">
+              Nouvelle Réservation Reçue !
+            </h2>
+            <p>Un client vient de réserver un créneau sur la plateforme.</p>
+            
+            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <p><strong>Client :</strong> ${booking.firstName} ${booking.lastName}</p>
+              <p><strong>Téléphone :</strong> ${booking.phoneNumber}</p>
+              <p><strong>Service :</strong> ${booking.service.nom}</p>
+              <p><strong>Date :</strong> ${formattedDate}</p>
+              <p><strong>Heure :</strong> ${booking.time}</p>
+              <p><strong>Montant Total :</strong> ${formatPrice(booking.totalAmount)} FCFA</p>
+              <p><strong>Avance versée :</strong> ${formatPrice(booking.advanceAmount)} FCFA</p>
+            </div>
+
+            <p style="font-size: 12px; color: #666; text-align: center; margin-top: 30px;">
+              Connectez-vous à votre espace <a href="${process.env.NEXTAUTH_URL}/admin/coiffeur" style="color: #fff; text-decoration: underline;">Freshcut Admin</a> pour attribuer ou gérer cette coupe.
+            </p>
+          </div>
+        `,
+      });
+    }
 
     return successResponse(booking, 'Booking created', 201);
   } catch (error: any) {

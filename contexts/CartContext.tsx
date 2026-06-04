@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState } from "react";
 export interface CartItem {
   id: string;
   nom: string;
+  categorie: string;
   prix: number;
   quantite: number;
   type?: "product" | "service" | "coupe"; // Type de l'article
@@ -12,7 +13,7 @@ export interface CartItem {
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: { id: string; nom: string; prix: number; type?: string; description?: string }) => void;
+  addToCart: (product: { id: string; nom: string; categorie: string ; prix: number; type?: string; description?: string }) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, delta: number) => void;
   clearCart: () => void;
@@ -28,7 +29,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [items, setItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const addToCart = (product: { id: string; nom: string; prix: number; type?: string; description?: string }) => {
+  const addToCart = (product: { id: string; nom: string; categorie: string ; prix: number; type?: string; description?: string }) => {
     setItems(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -39,6 +40,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return [...prev, {
         id: product.id,
         nom: product.nom,
+        categorie: product.categorie,
         prix: product.prix,
         quantite: 1,
         type: (product.type as "product" | "service" | "coupe") || "product",
