@@ -40,7 +40,6 @@ export default function Boutique() {
         
         const data = await res.json();
         
-        // Sécurisation selon le format de réponse de ton API
         if (Array.isArray(data)) {
           setProducts(data);
         } else if (data && Array.isArray(data.products)) {
@@ -57,13 +56,12 @@ export default function Boutique() {
     getProducts();
   }, []);
 
-  // Filtrage basé sur les données reçues de l'API (Rend les catégories insensibles à la casse au cas où)
   const filteredProducts = activeCategory === "TOUT" 
     ? products 
     : products.filter(p => p.categorie?.toUpperCase() === activeCategory);
 
   return (
-    <main className="pt-32 px-6 max-w-7xl mx-auto pb-20">
+    <main className="pt-32 px-6  mx-auto pb-20">
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

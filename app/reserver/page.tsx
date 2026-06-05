@@ -18,6 +18,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 // 1. Mise à jour des interfaces pour intégrer la grille tarifaire relationnelle
 interface ServicePriceData {
@@ -586,8 +587,7 @@ export default function Reserver() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Téléphone (MTN/Moov)</label>
-                  <input
+                  {/*<input
                     type="tel"
                     className="w-full bg-glass-bg border border-glass-border p-4 rounded-xl focus:border-white transition-colors outline-none"
                     placeholder="+229 XX XX XX XX"
@@ -596,6 +596,15 @@ export default function Reserver() {
                       setState((prev) => ({
                         ...prev,
                         client: { ...prev.client, telephone: e.target.value },
+                      }))
+                    }
+                  />*/}
+                  <PhoneInput
+                    value={state.client.telephone}
+                    onChange={(value) =>
+                      setState((prev) => ({
+                        ...prev,
+                        client: { ...prev.client, telephone: value },
                       }))
                     }
                   />

@@ -58,7 +58,7 @@ export default function Header() {
           <Link href="/" className="flex items-center gap-2 group">
             <Scissors size={18} className="text-white rotate-45 transition-transform duration-500 group-hover:rotate-90" />
             <span className="font-bold tracking-[0.25em] text-sm text-white uppercase">
-              Freshcut <span className="text-white/40">229</span>
+              Freshcut
             </span>
           </Link>
 

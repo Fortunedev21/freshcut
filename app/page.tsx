@@ -1,12 +1,13 @@
 "use client";
 import { motion } from "motion/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { Instagram, Heart, MessageCircle, ExternalLink } from "lucide-react";
 import { services, testimonials, galleryPhotos } from "@/data/siteData";
 import { COUPES } from "@/data/coupes";
 import { formatPrice } from "@/utils/format";
 import BoutiquePreview from "@/components/BoutiquePreview";
+import ServicesList from "@/components/ServiceList";
 
 export default function Home() {
 
@@ -93,32 +94,13 @@ const stagger = (i: number) => ({
       </section>
 
       {/* 3. SERVICES SECTION */}
-      <section id="services" className="py-16 px-5 max-w-7xl mx-auto w-full">
-        <h2 className="text-[11px] uppercase tracking-[0.12em] text-white/35 mb-6 font-medium">Nos prestations</h2>
-        <div className="flex overflow-x-auto md:grid md:grid-cols-3 gap-5 pb-4 snap-x snap-mandatory scrollbar-hide">
-          {services.map((service, i) => (
-            <motion.div 
-              key={i} 
-              {...fadeIn}
-              className="glass-card min-w-[280px] md:min-w-0 snap-start p-5 flex flex-col group cursor-pointer"
-            >
-              <div className="w-8 h-8 rounded-lg bg-white/8 flex items-center justify-center mb-4 group-hover:bg-white/12 transition-colors">
-                <div className="w-3 h-3 border border-white/40" />
-              </div>
-              <h3 className="text-sm font-medium text-white mb-2 uppercase tracking-tight">{service.nom}</h3>
-              <p className="text-[12px] text-white/40 leading-[1.5] mb-6 line-clamp-2">{service.desc}</p>
-              <div className="mt-auto">
-                <div className="text-base font-semibold text-white mb-4">
-                  {formatPrice(service.prix)} <span className="text-[11px] text-white/35 font-normal">FCFA</span>
-                </div>
-                <Link href={service.href} className="text-[11px] text-white/40 pt-3 border-t border-white/[0.08] block hover:text-white transition-colors">
-                  Réserver →
-                </Link>
-              </div>
-            </motion.div>
-          ))}
+      <Suspense fallback={
+        <div className="py-16 text-center text-xs uppercase tracking-widest text-white/20 animate-pulse">
+          Chargement des prestations...
         </div>
-      </section>
+      }>
+        <ServicesList />
+      </Suspense>
 
       {/* 4. LOOKBOOK SECTION */}
       <section className="py-24 px-5 max-w-7xl mx-auto w-full space-y-12">
@@ -127,14 +109,7 @@ const stagger = (i: number) => ({
             <h2 className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/30">Inspiration · Styles</h2>
             <h2 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter">Lookbook Freshcut</h2>
           </div>
-          <div className="flex flex-col items-start md:items-end gap-4">
-            <p className="text-secondary max-w-sm text-sm text-left md:text-right">
-              Découvrez les techniques et les finitions qui font notre renommée à Cotonou.
-            </p>
-            <Link href="/coupes" className="text-[10px] uppercase font-bold tracking-widest text-white hover:underline transition-all">
-              Voir tout le catalogue →
-            </Link>
-          </div>
+          
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -184,7 +159,7 @@ const stagger = (i: number) => ({
               <h2 className="text-[10px] uppercase font-bold tracking-[0.2em]">Instagram · Follow us</h2>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold uppercase tracking-tighter leading-none">
-              @freshcut229
+              @freshcut
             </h2>
           </div>
           <a 

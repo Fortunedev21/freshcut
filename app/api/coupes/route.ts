@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST create new coupe (ADMIN or SUPER_ADMIN)
+// POST create new coupe (SUPER_ADMIN only)
 export async function POST(request: NextRequest) {
   try {
     await requireRole(['SUPER_ADMIN', 'ADMIN']);

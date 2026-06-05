@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Phone, LogIn, Scissors } from 'lucide-react';
+import PhoneInput from '@/components/ui/PhoneInput';
 
 export default function ClientLoginPage() {
   const router = useRouter();
@@ -74,13 +75,9 @@ export default function ClientLoginPage() {
               <label className="block text-white/80 text-sm font-medium mb-2">
                 Numéro de téléphone *
               </label>
-              <input
-                type="tel"
+              <PhoneInput
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+229 67 12 34 56"
-                disabled={loading}
-                className="w-full bg-white/5 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:border-white/40 disabled:opacity-50"
+                onChange={setPhone}
               />
               <p className="text-white/40 text-xs mt-1">
                 Utilisé pour retrouver votre compte et vos réservations

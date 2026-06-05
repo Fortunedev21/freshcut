@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { ShoppingBag, MapPin, ChevronLeft, CheckCircle2, Store, Truck, CreditCard, Loader2 } from "lucide-react";
 import { useCart } from "@/contexts/CartContext"; 
 import { formatPrice } from "@/utils/format";
+import PhoneInput from "@/components/ui/PhoneInput";
 
 interface CheckoutState {
   step: number;
@@ -69,12 +70,21 @@ export default function Checkout() {
     openKkiapayWidget({
       amount: Math.round(finalTotal),
       reason: "Paiement Commande Boutique",
-      phone: state.client.telephone,
       name: `${state.client.prenom} ${state.client.nom}`,
       callback: window.location.origin + "/boutique/confirmation",
       publicAPIKey: process.env.NEXT_PUBLIC_KKIAPAY_PUBLIC_KEY,
       sandbox: false,
     });
+    /*
+        openKkiapayWidget({
+      amount: Math.round(finalTotal),
+      reason: "Paiement Commande Boutique",
+      phone: state.client.telephone,
+      name: `${state.client.prenom} ${state.client.nom}`,
+      callback: window.location.origin + "/boutique/confirmation",
+      publicAPIKey: process.env.NEXT_PUBLIC_KKIAPAY_PUBLIC_KEY,
+      sandbox: process.env.NEXT_PUBLIC_KKIAPAY_ENVIRONMENT,
+    }); */
   }, [finalTotal, state.client, openKkiapayWidget]);
 
   useEffect(() => {
@@ -224,8 +234,15 @@ export default function Checkout() {
                   <input type="text" placeholder="Nom *" className="w-full bg-glass-bg border border-glass-border p-4 rounded-xl outline-none" value={state.client.nom} onChange={(e) => setState(p => ({ ...p, client: { ...p.client, nom: e.target.value } }))} />
                   <input type="text" placeholder="Prénom *" className="w-full bg-glass-bg border border-glass-border p-4 rounded-xl outline-none" value={state.client.prenom} onChange={(e) => setState(p => ({ ...p, client: { ...p.client, prenom: e.target.value } }))} />
                 </div>
-                <input type="tel" placeholder="Téléphone (MTN / Moov) *" className="w-full bg-glass-bg border border-glass-border p-4 rounded-xl outline-none" value={state.client.telephone} onChange={(e) => setState(p => ({ ...p, client: { ...p.client, telephone: e.target.value } }))} />
-                
+                    <PhoneInput
+                    value={state.client.telephone}
+                    onChange={(value) =>
+                        setState((p) => ({
+                        ...p,
+                        client: { ...p.client, telephone: value },
+                        }))
+                    }
+                    />                
                 <AnimatePresence>
                   {state.shippingMethod === "DELIVERY" && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="space-y-4 overflow-hidden">
