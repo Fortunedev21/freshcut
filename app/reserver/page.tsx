@@ -1,7 +1,7 @@
 "use client";
 
 import { useKKiaPay } from "kkiapay-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -21,20 +21,13 @@ import { fr } from "date-fns/locale";
 import PhoneInput from "@/components/ui/PhoneInput";
 
 // 1. Mise à jour des interfaces pour intégrer la grille tarifaire relationnelle
-interface ServicePriceData {
-  id: string;
-  clientType: "ADULTE" | "ETUDIANT" | "ENFANT";
-  prix: number;
-  instructions?: string;
-}
-
 type SelectedService = {
   id: string;
   nom: string;
   duree: number;
   description?: string;
   badge?: string | null;
-  prices: ServicePriceData[]; // 👈 Ajout du tableau des tarifs
+  prix: number;
 };
 
 type CoupeType = {
@@ -74,7 +67,7 @@ function formatFCA(value: number) {
   return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
-export default function Reserver() {
+function ReserverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const coupeParam = searchParams.get("coupe");
@@ -196,10 +189,7 @@ export default function Reserver() {
    * Si le profil spécifique n'existe pas, il prend le tarif ADULTE par défaut.
    */
   const getServicePrice = (service: SelectedService, type: typeof clientType): number => {
-    if (!service.prices || service.prices.length === 0) return 0;
-    const targetPrice = service.prices.find((p) => p.clientType === type);
-    if (targetPrice) return targetPrice.prix;
-    return service.prices.find((p) => p.clientType === "ADULTE")?.prix || 0;
+    return service.prix || 0;
   };
 
   // 2. Calcul dynamique et corrigé du montant total
@@ -821,5 +811,17 @@ export default function Reserver() {
         )}
       </AnimatePresence>
     </main>
+  );
+}
+
+export default function Reserver() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A]">
+        <div className="text-white text-lg animate-pulse">Chargement de la page de réservation...</div>
+      </div>
+    }>
+      <ReserverContent />
+    </Suspense>
   );
 }

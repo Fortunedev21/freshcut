@@ -5,13 +5,6 @@ import Link from "next/link";
 import { faqs } from "@/data/faqs";
 import { formatPrice } from "@/utils/format";
 
-interface ServicePriceData {
-  id: string;
-  clientType: "ADULTE" | "ETUDIANT" | "ENFANT";
-  prix: number;
-  instructions?: string;
-}
-
 interface ServiceData {
   id: string;
   nom: string;
@@ -19,22 +12,16 @@ interface ServiceData {
   duree: number;
   categorie: string;
   badge?: string | null;
-  prices: ServicePriceData[];
+  prix: number;
 }
 
 export default function Services() {
   const [dbServices, setDbServices] = useState<ServiceData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("Tout");
-  const [activeClientType, setActiveClientType] = useState<"ADULTE" | "ETUDIANT" | "ENFANT">("ADULTE");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const categories = ["Tout", "COIFFURE_BARBE", "TRESSES_NATTES"];
-  const clientTypes: { value: typeof activeClientType; label: string }[] = [
-    { value: "ADULTE", label: "Adulte" },
-    { value: "ETUDIANT", label: "Étudiant" },
-    { value: "ENFANT", label: "Enfant (-12 ans)" },
-  ];
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -58,12 +45,6 @@ export default function Services() {
   const filteredServices = activeCategory === "Tout" 
     ? dbServices 
     : dbServices.filter(s => s.categorie?.toUpperCase() === activeCategory.toUpperCase());
-
-  const getPriceForType = (service: ServiceData, type: typeof activeClientType) => {
-    const specificPrice = service.prices?.find(p => p.clientType === type);
-    if (specificPrice) return specificPrice;
-    return service.prices?.find(p => p.clientType === "ADULTE") || { prix: 0, instructions: "" };
-  };
 
   return (
     <main className="bg-bg-base min-h-screen selection:bg-white selection:text-black">
@@ -111,22 +92,6 @@ export default function Services() {
               </button>
             ))}
           </div>
-
-          <div className="bg-white/[0.02] border border-white/[0.08] p-1 rounded-xl flex gap-1 self-start sm:self-auto">
-            {clientTypes.map((type) => (
-              <button
-                key={type.value}
-                onClick={() => setActiveClientType(type.value)}
-                className={`px-3.5 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-150 ${
-                  activeClientType === type.value
-                    ? "bg-white text-black shadow-sm font-semibold"
-                    : "text-white/40 hover:text-white/70"
-                }`}
-              >
-                {type.label}
-              </button>
-            ))}
-          </div>
         </div>
 
         {loading ? (
@@ -140,8 +105,6 @@ export default function Services() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
             {filteredServices.map((service) => {
-              const tariff = getPriceForType(service, activeClientType);
-              
               return (
                 <div key={service.id} className="glass-card p-4.5 flex flex-col gap-1.5 h-full group hover:border-white/20 hover:bg-white/[0.07] transition-all duration-300">
                   <div className="flex justify-between items-start">
@@ -159,21 +122,15 @@ export default function Services() {
                     <span className="text-[11px] text-white/30 font-medium">~ {service.duree} min</span>
                     <span className="w-1 h-1 rounded-full bg-white/10" />
                     <span className="text-base font-semibold text-white tracking-tight">
-                      {formatPrice(tariff.prix)} <span className="text-[10px] text-white/30 font-normal uppercase tracking-widest">FCFA</span>
+                      {formatPrice(service.prix)} <span className="text-[10px] text-white/30 font-normal uppercase tracking-widest">FCFA</span>
                     </span>
                   </div>
-
-                  {tariff.instructions && (
-                    <p className="text-[10.5px] italic text-white/25 mt-1 border-l border-white/10 pl-2">
-                      💡 {tariff.instructions}
-                    </p>
-                  )}
                   
                   <Link 
-                    href={`/reserver?service=${service.id}&type=${activeClientType}`} 
+                    href={`/reserver?service=${service.id}`} 
                     className="mt-auto pt-3 border-t border-white/[0.07] text-[11px] text-white/38 hover:text-white/70 flex justify-between items-center transition-colors"
                   >
-                    <span>Réserver ce service en tarif {activeClientType.toLowerCase()}</span>
+                    <span>Réserver ce service</span>
                     <span>→</span>
                   </Link>
                 </div>

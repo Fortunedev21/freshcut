@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { BookingStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { getServerSession, requireRole } from '@/lib/auth';
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       const bookings = await prisma.booking.findMany({
         where: {
           phoneNumber,
-          ...(status && { status }),
+          ...(status && { status: status as BookingStatus }),
           ...(date && {
             date: {
               gte: new Date(date),
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     const bookings = await prisma.booking.findMany({
       where: {
-        ...(status && { status }),
+        ...(status && { status: status as BookingStatus }),
         ...(date && {
           date: {
             gte: new Date(date),

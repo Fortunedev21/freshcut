@@ -5,13 +5,6 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { formatPrice } from "@/utils/format";
 
-interface ServicePriceData {
-  id: string;
-  clientType: "ADULTE" | "ETUDIANT" | "ENFANT";
-  prix: number;
-  instructions?: string;
-}
-
 interface ServiceData {
   id: string;
   nom: string;
@@ -19,15 +12,12 @@ interface ServiceData {
   duree: number;
   categorie: string;
   badge?: string | null;
-  prices: ServicePriceData[];
+  prix: number;
 }
 
 export default function ServicesList() {
   const [dbServices, setDbServices] = useState<ServiceData[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Par défaut sur ADULTE pour l'affichage rapide sur la page d'accueil
-  const activeClientType: "ADULTE" | "ETUDIANT" | "ENFANT" = "ADULTE";
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -47,12 +37,6 @@ export default function ServicesList() {
 
     fetchServices();
   }, []);
-
-  const getPriceForType = (service: ServiceData, type: typeof activeClientType) => {
-    const specificPrice = service.prices?.find((p) => p.clientType === type);
-    if (specificPrice) return specificPrice;
-    return service.prices?.find((p) => p.clientType === "ADULTE") || { prix: 0, instructions: "" };
-  };
 
   if (loading) {
     return (
@@ -83,11 +67,9 @@ export default function ServicesList() {
         </Link>
       </div>
 
-      {/* GRILLE DÉCALQUÉE SUR LE DESIGN DES SERVICES (2 colonnes sur desktop comme ta structure) */}
+      {/* GRILLE DÉCALQUÉE SUR LE DESIGN DES SERVICES */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
         {displayedServices.map((service, i) => {
-          const tariff = getPriceForType(service, activeClientType);
-
           return (
             <motion.div
               key={service.id}
@@ -115,22 +97,16 @@ export default function ServicesList() {
                 <span className="text-[11px] text-white/30 font-medium">~ {service.duree} min</span>
                 <span className="w-1 h-1 rounded-full bg-white/10" />
                 <span className="text-base font-semibold text-white tracking-tight">
-                  {formatPrice(tariff.prix)}{" "}
+                  {formatPrice(service.prix)}{" "}
                   <span className="text-[10px] text-white/30 font-normal uppercase tracking-widest">FCFA</span>
                 </span>
               </div>
 
-              {tariff.instructions && (
-                <p className="text-[10.5px] italic text-white/25 mt-1 border-l border-white/10 pl-2">
-                  💡 {tariff.instructions}
-                </p>
-              )}
-
               <Link
-                href={`/reserver?service=${service.id}&type=${activeClientType}`}
+                href={`/reserver?service=${service.id}`}
                 className="mt-auto pt-3 border-t border-white/[0.07] text-[11px] text-white/38 hover:text-white/70 flex justify-between items-center transition-colors"
               >
-                <span>Réserver ce service en tarif {activeClientType.toLowerCase()}</span>
+                <span>Réserver ce service</span>
                 <span>→</span>
               </Link>
             </motion.div>

@@ -116,7 +116,7 @@ export default function Checkout() {
 
         clearCart();
         alert("Commande enregistrée avec succès !");
-        router.push("/boutique/suivi");
+        router.push("/client?tab=orders");
       } catch (error) {
         alert("Impossible de finaliser votre commande. Contactez le support.");
       } finally {

@@ -2,13 +2,6 @@ import { NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { requireRole } from '@/lib/auth';
-import { ClientType } from '@prisma/client';
-
-interface PriceInput {
-  clientType: ClientType;
-  prix: number | string;
-  instructions?: string;
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,9 +10,6 @@ export async function GET(request: NextRequest) {
 
     const services = await prisma.service.findMany({
       where: categorie ? { categorie } : {},
-      include: {
-        prices: true,
-      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -35,9 +25,9 @@ export async function POST(request: NextRequest) {
     await requireRole(['SUPER_ADMIN', 'ADMIN']);
 
     const body = await request.json();
-    const { nom, categorie, description, duree, badge, prices } = body;
+    const { nom, categorie, description, duree, badge, prix } = body;
 
-    if (!nom || !categorie || !description || !duree || !prices || !Array.isArray(prices)) {
+    if (!nom || !categorie || !description || !duree || prix === undefined) {
       return errorResponse('Missing required fields', 400);
     }
 
@@ -47,19 +37,8 @@ export async function POST(request: NextRequest) {
         categorie,
         description,
         duree: parseInt(duree),
+        prix: parseInt(prix.toString()),
         badge,
-        prices: {
-          createMany: {
-            data: prices.map((p: PriceInput) => ({
-              clientType: p.clientType,
-              prix: parseInt(p.prix.toString()),
-              instructions: p.instructions || "",
-            })),
-          },
-        },
-      },
-      include: {
-        prices: true,
       },
     });
 
