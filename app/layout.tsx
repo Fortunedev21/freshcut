@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Freshcut 229 | Barbershop Premium Cotonou",
+  title: "Freshcut | Barbershop Premium Cotonou",
   description: "L'expérience coiffure premium à Cotonou. Réservez votre créneau en ligne, payez l'avance, on s'occupe du reste.",
 };
 
