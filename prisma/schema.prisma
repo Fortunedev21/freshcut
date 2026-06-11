@@ -21,20 +21,24 @@ model User {
 }
 
 enum UserRole {
-  ADMIN
-  SUPER_ADMIN
+  ADMIN       // Coiffeur (gère ses RDV)
+  SUPER_ADMIN // Boss (gère tout)
 }
 
+// ============================================
+// Haircut Styles (Lookbook)
+// ============================================
+
 model Coupe {
-  id                String   @id @default(cuid())
-  nom               String   @unique
-  description       String
-  tempsEstimation   String   // "45 min", "60 min"
-  difficulte        Int      // 1-5 difficulty level
-  image             String   // URL or path to photo
-  conseils          String[] // Array of care tips
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String   @id @default(cuid())
+  nom             String   @unique
+  description     String
+  tempsEstimation String
+  difficulte      Int
+  image           String
+  conseils        String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([difficulte])
 }
@@ -44,79 +48,59 @@ model Coupe {
 // ============================================
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   nom         String
-  categorie   String   
-  prix        Int      
+  categorie   String              // BARBE, CHEVEUX, ACCESSOIRES, MERCHANDISING
+  prix        Int                 // in FCFA
   description String
   image       String?
-  stock       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  stock       Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  orderItems  BoutiqueOrderItem[]
 
   @@index([categorie])
 }
 
-enum ClientType {
-  ADULTE
-  ETUDIANT
-  ENFANT
-}
-
 // ============================================
-// Services & Reservations
+// Services (Haircut & Beard Services)
 // ============================================
 
 model Service {
-  id          String         @id @default(cuid())
-  nom         String         @unique
-  categorie   String         
+  id          String    @id @default(cuid())
+  nom         String    @unique
+  categorie   String    // Coupe, Barbe, Combos, Soins
   description String
-  duree       Int       
-  badge       String?   
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  duree       Int       // minutes
+  prix        Int       // in FCFA
+  badge       String?   // "Populaire", "Meilleure valeur"
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   bookings    Booking[]
-  prices      ServicePrice[]
 
   @@index([categorie])
 }
 
-model ServicePrice {
-  id        String     @id @default(cuid())
-  serviceId String
-  service   Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  clientType ClientType
-  prix      Int 
-  instructions String
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  @@unique([serviceId, clientType]) 
-  @@index([serviceId])
-}
+// ============================================
+// Bookings (Reservations)
+// ============================================
 
 model Booking {
-  id            String         @id @default(cuid())
+  id            String        @id @default(cuid())
   phoneNumber   String
   firstName     String
   lastName      String
   email         String?
   serviceId     String
-  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  coupeId       String?        
-  barberIdAssigned String?     
+  service       Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   date          DateTime
-  time          String         
-  status        BookingStatus  @default(PENDING)
-  advanceAmount Int
-  totalAmount   Int
+  time          String        // "09:00"
+  status        BookingStatus @default(PENDING)
+  advanceAmount Int           // Advance payment in FCFA
+  totalAmount   Int           // Total price in FCFA
   notes         String?
-  validatedAt   DateTime?
-  completedAt   DateTime?
-  cancelledAt   DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([phoneNumber])
   @@index([date])
@@ -132,54 +116,99 @@ enum BookingStatus {
   NO_SHOW
 }
 
+// ============================================
+// Clients (Loyalty Program)
+// ============================================
+
 model Client {
-  id        String   @id @default(cuid())
-  phone     String   @unique
-  firstName String
-  lastName  String
-  points    Int      @default(0) 
-  totalSpent Int     @default(0) 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  phone      String   @unique
+  firstName  String
+  lastName   String
+  points     Int      @default(0)  // 0-9, 10 = free service
+  totalSpent Int      @default(0)  // Total money spent in FCFA
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([phone])
 }
 
+// ============================================
+// Inventory & Stock Tracking
+// ============================================
 
 model InventoryLog {
   id        String   @id @default(cuid())
   productId String
   oldStock  Int
   newStock  Int
-  reason    String
+  reason    String   // "SALE", "RESTOCK", "DAMAGE", "ADJUSTMENT"
   createdAt DateTime @default(now())
 
   @@index([productId])
 }
 
+// ============================================
+// Financial Records
+// ============================================
+
 model Invoice {
   id            String   @id @default(cuid())
   bookingId     String   @unique
   amount        Int
-  paymentMethod String 
-  status        String 
+  paymentMethod String   // "CASH", "MOBILE_MONEY", "CARD"
+  status        String   // "PAID", "PENDING", "REFUNDED"
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   @@index([status])
 }
 
+// ============================================
+// Boutique Orders & Payments
+// ============================================
 
+model BoutiqueOrder {
+  id             String              @id @default(cuid())
+  clientPhone    String
+  firstName      String
+  lastName       String
+  adresse        String?
+  ville          String?
+  shippingMethod String              // "SALON" | "DELIVERY"
+  shippingCost   Int                 @default(0)
+  totalAmount    Int                 // Total of item prices * quantities
+  finalAmount    Int                 // totalAmount + shippingCost
+  status         String              @default("PAID") // "PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  items          BoutiqueOrderItem[]
+  payment        BoutiquePayment?
 
-model BarberAvailability {
-  id          String   @id @default(cuid())
-  barberId    String   // Email of the barber (admin user)
-  dayOfWeek   Int      // 0 = Monday, 6 = Sunday
-  startTime   String   // "09:00"
-  endTime     String   // "18:00"
-  isAvailable Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  @@index([clientPhone])
+  @@index([status])
+}
 
-  @@index([barberId, dayOfWeek])
+model BoutiqueOrderItem {
+  id        String        @id @default(cuid())
+  orderId   String
+  order     BoutiqueOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product       @relation(fields: [productId], references: [id])
+  quantite  Int
+  prix      Int           // Price at purchase time
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model BoutiquePayment {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  order         BoutiqueOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transactionId String        @unique
+  amount        Int
+  status        String        @default("SUCCESS") // "PENDING", "SUCCESS", "FAILED"
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }

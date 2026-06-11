@@ -21,20 +21,13 @@ import { fr } from "date-fns/locale";
 import PhoneInput from "@/components/ui/PhoneInput";
 
 // 1. Mise à jour des interfaces pour intégrer la grille tarifaire relationnelle
-interface ServicePriceData {
-  id: string;
-  clientType: "ADULTE" | "ETUDIANT" | "ENFANT";
-  prix: number;
-  instructions?: string;
-}
-
 type SelectedService = {
   id: string;
   nom: string;
   duree: number;
   description?: string;
   badge?: string | null;
-  prices: ServicePriceData[]; // 👈 Ajout du tableau des tarifs
+  prix: number;
 };
 
 type CoupeType = {
@@ -74,7 +67,11 @@ function formatFCA(value: number) {
   return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
+<<<<<<< HEAD
 function ReserverInner() {
+=======
+function ReserverContent() {
+>>>>>>> e724a6a80522b922b545edbd3abca6f4c0c50905
   const router = useRouter();
   const searchParams = useSearchParams();
   const coupeParam = searchParams.get("coupe");
@@ -196,10 +193,7 @@ function ReserverInner() {
    * Si le profil spécifique n'existe pas, il prend le tarif ADULTE par défaut.
    */
   const getServicePrice = (service: SelectedService, type: typeof clientType): number => {
-    if (!service.prices || service.prices.length === 0) return 0;
-    const targetPrice = service.prices.find((p) => p.clientType === type);
-    if (targetPrice) return targetPrice.prix;
-    return service.prices.find((p) => p.clientType === "ADULTE")?.prix || 0;
+    return service.prix || 0;
   };
 
   // 2. Calcul dynamique et corrigé du montant total
@@ -826,8 +820,12 @@ function ReserverInner() {
 
 export default function Reserver() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-white/40 text-xs uppercase tracking-widest">Chargement...</div></div>}>
-      <ReserverInner />
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#0A0A0A]">
+        <div className="text-white text-lg animate-pulse">Chargement de la page de réservation...</div>
+      </div>
+    }>
+      <ReserverContent />
     </Suspense>
   );
 }

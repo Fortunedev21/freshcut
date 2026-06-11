@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { BookingStatus } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/lib/api-response';
 import { getServerSession, requireRole } from '@/lib/auth';
