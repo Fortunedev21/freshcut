@@ -67,11 +67,7 @@ function formatFCA(value: number) {
   return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
-<<<<<<< HEAD
-function ReserverInner() {
-=======
 function ReserverContent() {
->>>>>>> e724a6a80522b922b545edbd3abca6f4c0c50905
   const router = useRouter();
   const searchParams = useSearchParams();
   const coupeParam = searchParams.get("coupe");
@@ -314,6 +310,7 @@ function ReserverContent() {
             phoneNumber,
             firstName: state.client.prenom,
             lastName: state.client.nom,
+            serviceId: state.serviceId || selectedServiceIds[0],
             serviceIds: selectedServiceIds,
             clientType, // On sauvegarde la variante choisie en base de données
             ...(selectedCoupe && { coupeId: selectedCoupe.id }),

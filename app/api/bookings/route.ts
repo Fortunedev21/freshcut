@@ -5,7 +5,7 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { getServerSession, requireRole } from '@/lib/auth';
 import { resend } from '@/lib/resend';
 import { formatPrice } from '@/utils/format';
-import { BookingStatus } from '@prisma/client';
+
 
 // GET all bookings (ADMIN only) or filter by phone (public)
 export async function GET(request: NextRequest) {

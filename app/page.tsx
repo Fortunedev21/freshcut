@@ -66,11 +66,7 @@ const TESTIMONIALS = [
   }
 ];
 
-interface ServicePriceData {
-  id: string;
-  clientType: "ADULTE" | "ETUDIANT" | "ENFANT";
-  prix: number;
-}
+
 
 interface ServiceData {
   id: string;
@@ -79,7 +75,7 @@ interface ServiceData {
   duree: number;
   categorie: string;
   badge?: string | null;
-  prices: ServicePriceData[];
+  prix: number;
 }
 
 export default function Home() {
@@ -206,7 +202,6 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredServices.map((service) => {
-              const adultPrice = service.prices?.find(p => p.clientType === "ADULTE")?.prix || 0;
               return (
                 <motion.div key={service.id} {...fadeIn} className="glass-card p-6 border border-white/5 rounded-2xl flex flex-col justify-between hover:border-white/10 transition-all group relative overflow-hidden">
                   <div>
@@ -225,7 +220,7 @@ export default function Home() {
                       <Clock size={12} /> {service.duree} min
                     </span>
                     <span className="text-base font-bold text-white tracking-tight">
-                      {formatPrice(adultPrice)}
+                      {formatPrice(service.prix)}
                     </span>
                   </div>
                 </motion.div>
