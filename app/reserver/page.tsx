@@ -1,7 +1,7 @@
 "use client";
 
 import { useKKiaPay } from "kkiapay-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -74,7 +74,7 @@ function formatFCA(value: number) {
   return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
-export default function Reserver() {
+function ReserverInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const coupeParam = searchParams.get("coupe");
@@ -821,5 +821,13 @@ export default function Reserver() {
         )}
       </AnimatePresence>
     </main>
+  );
+}
+
+export default function Reserver() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-pulse text-white/40 text-xs uppercase tracking-widest">Chargement...</div></div>}>
+      <ReserverInner />
+    </Suspense>
   );
 }

@@ -128,23 +128,17 @@ export async function PATCH(
 
     // Add points if booking completed
     if (action === 'complete' && booking.phoneNumber) {
-      const service = await prisma.service.findUnique({
-        where: { id: booking.serviceId },
-      });
-
-      if (service) {
-        await prisma.client.update({
-          where: { phone: booking.phoneNumber },
-          data: {
-            points: {
-              increment: 1,
-            },
-            totalSpent: {
-              increment: service.prix,
-            },
+      await prisma.client.update({
+        where: { phone: booking.phoneNumber },
+        data: {
+          points: {
+            increment: 1,
           },
-        });
-      }
+          totalSpent: {
+            increment: booking.totalAmount,
+          },
+        },
+      });
     }
 
     return successResponse(updated, `Booking ${action}ed`);

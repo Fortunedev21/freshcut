@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { getServerSession, requireRole } from '@/lib/auth';
 import { resend } from '@/lib/resend';
 import { formatPrice } from '@/utils/format';
+import { BookingStatus } from '@prisma/client';
 
 // GET all bookings (ADMIN only) or filter by phone (public)
 export async function GET(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       const bookings = await prisma.booking.findMany({
         where: {
           phoneNumber,
-          ...(status && { status }),
+          ...(status && { status: status as BookingStatus }),
           ...(date && {
             date: {
               gte: new Date(date),
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     const bookings = await prisma.booking.findMany({
       where: {
-        ...(status && { status }),
+        ...(status && { status: status as BookingStatus }),
         ...(date && {
           date: {
             gte: new Date(date),
@@ -101,31 +102,25 @@ export async function POST(request: NextRequest) {
         ...(coupeId && { coupeId }),
         date: new Date(date),
         time,
-        advanceAmount: parseInt(advanceAmount) || service.prix,
-        totalAmount: parseInt(totalAmount) || service.prix,
+        advanceAmount: parseInt(advanceAmount) || 0,
+        totalAmount: parseInt(totalAmount) || 0,
         notes,
       },
       include: { service: true },
     });
 
-    // Update or create client loyalty record
+    // Create or update client record (loyalty points & totalSpent are
+    // incremented on booking *completion*, not creation)
     await prisma.client.upsert({
       where: { phone: phoneNumber },
       create: {
         phone: phoneNumber,
         firstName,
         lastName,
-        points: 1,
-        totalSpent: service.prix,
+        points: 0,
+        totalSpent: 0,
       },
-      update: {
-        points: {
-          increment: 1,
-        },
-        totalSpent: {
-          increment: service.prix,
-        },
-      },
+      update: {},
     });
 
     const barbers = await prisma.user.findMany({

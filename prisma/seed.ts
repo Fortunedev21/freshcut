@@ -71,59 +71,88 @@ async function seed() {
 
     console.log('✅ Coupes (haircut styles) created');
 
-    // Create services (booking services)
-    const services = await prisma.service.createMany({
-      data: [
-        {
-          nom: 'Dégradé',
-          categorie: 'Coupe',
-          description: 'Contour et dégradé précis, finition soignée',
-          duree: 30,
-          prix: 2500,
-          badge: 'Populaire',
+    // Create services with per-ClientType prices (ServicePrice)
+    const serviceData = [
+      {
+        nom: 'Dégradé',
+        categorie: 'Coupe',
+        description: 'Contour et dégradé précis, finition soignée',
+        duree: 30,
+        badge: 'Populaire',
+        prixAdulte: 2500,
+        prixEtudiant: 2000,
+        prixEnfant: 1500,
+      },
+      {
+        nom: 'Coupe plat',
+        categorie: 'Coupe',
+        description: 'Coupe classique nette, tous types de cheveux',
+        duree: 25,
+        badge: null,
+        prixAdulte: 2000,
+        prixEtudiant: 1500,
+        prixEnfant: 1000,
+      },
+      {
+        nom: 'Barbe',
+        categorie: 'Barbe',
+        description: 'Taille, contour et soin complet de la barbe',
+        duree: 20,
+        badge: null,
+        prixAdulte: 1500,
+        prixEtudiant: 1500,
+        prixEnfant: 1000,
+      },
+      {
+        nom: 'Combo',
+        categorie: 'Combos',
+        description: 'Coupe + barbe + soin du visage inclus',
+        duree: 55,
+        badge: 'Meilleure valeur',
+        prixAdulte: 3500,
+        prixEtudiant: 3000,
+        prixEnfant: 2500,
+      },
+      {
+        nom: 'Enfant',
+        categorie: 'Coupe',
+        description: 'Coupe pour moins de 12 ans',
+        duree: 20,
+        badge: null,
+        prixAdulte: 1500,
+        prixEtudiant: 1500,
+        prixEnfant: 1000,
+      },
+      {
+        nom: 'Soin visage',
+        categorie: 'Soins',
+        description: 'Nettoyage, hydratation et masque',
+        duree: 15,
+        badge: null,
+        prixAdulte: 1000,
+        prixEtudiant: 1000,
+        prixEnfant: 1000,
+      },
+    ];
+
+    for (const s of serviceData) {
+      await prisma.service.create({
+        data: {
+          nom: s.nom,
+          categorie: s.categorie,
+          description: s.description,
+          duree: s.duree,
+          badge: s.badge,
+          prices: {
+            create: [
+              { clientType: 'ADULTE',   prix: s.prixAdulte,   instructions: 'Tarif adulte standard' },
+              { clientType: 'ETUDIANT', prix: s.prixEtudiant, instructions: 'Tarif réduit sur présentation de carte étudiante' },
+              { clientType: 'ENFANT',   prix: s.prixEnfant,   instructions: 'Tarif enfant (moins de 12 ans)' },
+            ],
+          },
         },
-        {
-          nom: 'Coupe plat',
-          categorie: 'Coupe',
-          description: 'Coupe classique nette, tous types de cheveux',
-          duree: 25,
-          prix: 2000,
-          badge: null,
-        },
-        {
-          nom: 'Barbe',
-          categorie: 'Barbe',
-          description: 'Taille, contour et soin complet de la barbe',
-          duree: 20,
-          prix: 1500,
-          badge: null,
-        },
-        {
-          nom: 'Combo',
-          categorie: 'Combos',
-          description: 'Coupe + barbe + soin du visage inclus',
-          duree: 55,
-          prix: 3500,
-          badge: 'Meilleure valeur',
-        },
-        {
-          nom: 'Enfant',
-          categorie: 'Coupe',
-          description: 'Coupe pour moins de 12 ans',
-          duree: 20,
-          prix: 1500,
-          badge: null,
-        },
-        {
-          nom: 'Soin visage',
-          categorie: 'Soins',
-          description: 'Nettoyage, hydratation et masque',
-          duree: 15,
-          prix: 1000,
-          badge: null,
-        },
-      ],
-    });
+      });
+    }
 
     console.log('✅ Services created');
 
