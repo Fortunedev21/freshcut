@@ -107,44 +107,28 @@ export async function PATCH(
 
     const updateData: any = { status: newStatus };
 
-    // Track completion time
-    if (action === 'complete') {
-      updateData.completedAt = now;
-    }
-    // Track cancellation time
-    if (action === 'cancel') {
-      updateData.cancelledAt = now;
-    }
-    // Track validation time
-    if (action === 'confirm') {
-      updateData.validatedAt = now;
-    }
-
     const updated = await prisma.booking.update({
       where: { id },
       data: updateData,
       include: { service: true },
     });
 
-    // Add points if booking completed
+    // Add points and update totalSpent when booking is completed
     if (action === 'complete' && booking.phoneNumber) {
-      const service = await prisma.service.findUnique({
-        where: { id: booking.serviceId },
+      await prisma.client.upsert({
+        where: { phone: booking.phoneNumber },
+        create: {
+          phone: booking.phoneNumber,
+          firstName: booking.firstName,
+          lastName: booking.lastName,
+          points: 1,
+          totalSpent: booking.totalAmount,
+        },
+        update: {
+          points: { increment: 1 },
+          totalSpent: { increment: booking.totalAmount },
+        },
       });
-
-      if (service) {
-        await prisma.client.update({
-          where: { phone: booking.phoneNumber },
-          data: {
-            points: {
-              increment: 1,
-            },
-            totalSpent: {
-              increment: service.prix,
-            },
-          },
-        });
-      }
     }
 
     return successResponse(updated, `Booking ${action}ed`);
