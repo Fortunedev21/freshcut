@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -24,24 +21,24 @@ model User {
 }
 
 enum UserRole {
-  ADMIN         // Coiffeur (gère ses RDV)
-  SUPER_ADMIN   // Boss (gère tout)
+  ADMIN       // Coiffeur (gère ses RDV)
+  SUPER_ADMIN // Boss (gère tout)
 }
 
 // ============================================
-// Haircut Styles (Coiffures/Lookbook) - Admin can add with photos
+// Haircut Styles (Lookbook)
 // ============================================
 
 model Coupe {
-  id                String   @id @default(cuid())
-  nom               String   @unique
-  description       String
-  tempsEstimation   String   // "45 min", "60 min"
-  difficulte        Int      // 1-5 difficulty level
-  image             String   // URL or path to photo
-  conseils          String[] // Array of care tips
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String   @id @default(cuid())
+  nom             String   @unique
+  description     String
+  tempsEstimation String
+  difficulte      Int
+  image           String
+  conseils        String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([difficulte])
 }
@@ -51,15 +48,15 @@ model Coupe {
 // ============================================
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String              @id @default(cuid())
   nom         String
-  categorie   String   // BARBE, CHEVEUX, ACCESSOIRES, MERCHANDISING
-  prix        Int      // in FCFA
+  categorie   String              // BARBE, CHEVEUX, ACCESSOIRES, MERCHANDISING
+  prix        Int                 // in FCFA
   description String
   image       String?
-  stock       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  stock       Int                 @default(0)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   orderItems  BoutiqueOrderItem[]
 
   @@index([categorie])
@@ -89,21 +86,21 @@ model Service {
 // ============================================
 
 model Booking {
-  id            String         @id @default(cuid())
+  id            String        @id @default(cuid())
   phoneNumber   String
   firstName     String
   lastName      String
   email         String?
   serviceId     String
-  service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  service       Service       @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   date          DateTime
-  time          String         // "09:00"
-  status        BookingStatus  @default(PENDING)
-  advanceAmount Int            // Advance payment in FCFA
-  totalAmount   Int            // Total price in FCFA
+  time          String        // "09:00"
+  status        BookingStatus @default(PENDING)
+  advanceAmount Int           // Advance payment in FCFA
+  totalAmount   Int           // Total price in FCFA
   notes         String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([phoneNumber])
   @@index([date])
@@ -124,14 +121,14 @@ enum BookingStatus {
 // ============================================
 
 model Client {
-  id        String   @id @default(cuid())
-  phone     String   @unique
-  firstName String
-  lastName  String
-  points    Int      @default(0)   // 0-9, 10 = free service
-  totalSpent Int     @default(0)   // Total money spent
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  phone      String   @unique
+  firstName  String
+  lastName   String
+  points     Int      @default(0)  // 0-9, 10 = free service
+  totalSpent Int      @default(0)  // Total money spent in FCFA
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([phone])
 }
@@ -172,21 +169,21 @@ model Invoice {
 // ============================================
 
 model BoutiqueOrder {
-  id              String              @id @default(cuid())
-  clientPhone     String
-  firstName       String
-  lastName        String
-  adresse         String?
-  ville           String?
-  shippingMethod  String              // "SALON" | "DELIVERY"
-  shippingCost    Int                 @default(0)
-  totalAmount     Int                 // Total of item prices * quantities
-  finalAmount     Int                 // total + shipping
-  status          String              @default("PAID") // "PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-  items           BoutiqueOrderItem[]
-  payment         BoutiquePayment?
+  id             String              @id @default(cuid())
+  clientPhone    String
+  firstName      String
+  lastName       String
+  adresse        String?
+  ville          String?
+  shippingMethod String              // "SALON" | "DELIVERY"
+  shippingCost   Int                 @default(0)
+  totalAmount    Int                 // Total of item prices * quantities
+  finalAmount    Int                 // totalAmount + shippingCost
+  status         String              @default("PAID") // "PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  items          BoutiqueOrderItem[]
+  payment        BoutiquePayment?
 
   @@index([clientPhone])
   @@index([status])
@@ -199,7 +196,7 @@ model BoutiqueOrderItem {
   productId String
   product   Product       @relation(fields: [productId], references: [id])
   quantite  Int
-  prix      Int           // Price at purchase
+  prix      Int           // Price at purchase time
 
   @@index([orderId])
   @@index([productId])
@@ -215,4 +212,3 @@ model BoutiquePayment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
-

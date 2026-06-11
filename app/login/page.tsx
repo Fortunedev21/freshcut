@@ -87,24 +87,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-white/60 text-sm mt-6 text-center">
-            Pas encore de compte?{' '}
-            <Link href="/register" className="text-white hover:underline">
-              S'enregistrer
-            </Link>
-          </p>
-
-          <div className="mt-8 pt-6 border-t border-white/10">
-            <p className="text-white/40 text-xs">
-              Comptes de test:
-            </p>
-            <p className="text-white/60 text-xs mt-2">
-              <strong>Boss:</strong> boss@freshcut.com / password
-            </p>
-            <p className="text-white/60 text-xs">
-              <strong>Coiffeur:</strong> coiffeur@freshcut.com / password
-            </p>
-          </div>
+          
         </div>
       </div>
     </div>
