@@ -56,11 +56,13 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
-            <Scissors size={18} className="text-white rotate-45 transition-transform duration-500 group-hover:rotate-90" />
-            <span className="font-bold tracking-[0.25em] text-sm text-white uppercase">
-              Freshcut
-            </span>
+            <img 
+              src="/freshcut.svg" 
+              alt="Freshcut Logo" 
+              className="h-5 w-auto transition-transform duration-500 group-hover:scale-105" 
+            />
           </Link>
+
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-8">

@@ -216,9 +216,9 @@ export default function ClientDashboard() {
                       </span>
                     </div>
                     <div className="flex gap-6 text-white/60 text-sm flex-wrap">
-                      <span>📅 {new Date(booking.date).toLocaleDateString('fr-FR')}</span>
-                      <span>🕐 {booking.time}</span>
-                      <span>💰 {formatPrice(booking.totalAmount)} FCFA</span>
+                      <span>Date : {new Date(booking.date).toLocaleDateString('fr-FR')}</span>
+                      <span>a {booking.time}</span>
+                      <span> {formatPrice(booking.totalAmount)} FCFA</span>
                     </div>
                   </div>
                 ))}

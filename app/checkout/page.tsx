@@ -25,6 +25,7 @@ export default function Checkout() {
   const router = useRouter();
   const { items: cartItems, total: totalAmount, clearCart } = useCart();
   const { openKkiapayWidget, addKkiapayListener, removeKkiapayListener } = useKKiaPay();
+  const [isOrderConfirmed, setIsOrderConfirmed] = useState(false);
 
   const [state, setState] = useState<CheckoutState>({
     step: 1,
@@ -112,19 +113,21 @@ export default function Checkout() {
           }),
         });
 
-        if (!response.ok) throw new Error("Order creation failed");
+       if (!response.ok) throw new Error("Order creation failed");
 
         clearCart();
-        alert("Commande enregistrée avec succès !");
-        router.push("/boutique/suivi");
+        // Au lieu de router.push, on passe au step 3
+        setState(prev => ({ ...prev, step: 3 }));
+        setIsOrderConfirmed(true);
       } catch (error) {
         alert("Impossible de finaliser votre commande. Contactez le support.");
       } finally {
         setSubmitting(false);
       }
     },
-    [state, cartItems, totalAmount, shippingCost, finalTotal, clearCart, router]
+    [state, cartItems, totalAmount, shippingCost, finalTotal, clearCart]
   );
+
 
   useEffect(() => {
     function successHandler(response: any) {

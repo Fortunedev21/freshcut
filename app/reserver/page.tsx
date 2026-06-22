@@ -499,7 +499,12 @@ export default function Reserver() {
                     }}
                     locale={fr}
                     disabled={{ before: new Date() }}
-                    className="glass-card p-4 rounded-xl text-white"
+                    className="glass-card p-4 rounded-xl text-white shadow-lg p-5"
+                    classNames={{
+                      today: `border-white rounded-xl`,
+                      selected: `bg-white rounded-4xl border-amber-500 text-black`,
+                      chevron: `fill-white`
+                    }}
                   />
                 </div>
 

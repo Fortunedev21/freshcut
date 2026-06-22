@@ -52,12 +52,13 @@ export default function ClientLoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4 pt-32 sm:pt-0">
       <div className="w-full max-w-md">
         <div className="glass-card p-8 rounded-xl border flex flex-col border-white/10">
-          <Link href="/" className="flex items-center gap-2 group w-full justify-center">
-            <Scissors size={18} className="text-white rotate-45 transition-transform duration-500 group-hover:rotate-90" />
-            <span className="font-bold tracking-[0.25em] text-xl text-white uppercase">
-              Freshcut <span className="text-white/40">229</span>
-            </span>
-          </Link>
+                    <Link href="/" className=" w-full items-center justify-center flex gap-2 group">
+                      <img 
+                        src="/freshcut.svg" 
+                        alt="Freshcut Logo" 
+                        className="h-5 w-auto transition-transform duration-500 group-hover:scale-105" 
+                      />
+                    </Link>
 
           <p className="text-white/60 text-center mb-8 mt-2 text-xs">
             Connexion Client

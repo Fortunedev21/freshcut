@@ -40,7 +40,13 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] px-4">
       <div className="w-full max-w-md">
         <div className="glass-card p-8 rounded-xl border border-white/10">
-          <h1 className="text-3xl font-bold text-white mb-2">Freshcut 229</h1>
+                    <Link href="/" className="w-full items-center justify-center flex gap-2 group">
+                      <img 
+                        src="/freshcut.svg" 
+                        alt="Freshcut Logo" 
+                        className="h-5 w-auto transition-transform duration-500 group-hover:scale-105" 
+                      />
+                    </Link>
           <p className="text-white/60 mb-8">Tableau de bord administrateur</p>
 
           <form onSubmit={handleLogin} className="space-y-4">

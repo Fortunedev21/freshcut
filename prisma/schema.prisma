@@ -173,10 +173,10 @@ model Invoice {
 
 model BarberAvailability {
   id          String   @id @default(cuid())
-  barberId    String   // Email of the barber (admin user)
-  dayOfWeek   Int      // 0 = Monday, 6 = Sunday
-  startTime   String   // "09:00"
-  endTime     String   // "18:00"
+  barberId    String   
+  dayOfWeek   Int      
+  startTime   String   
+  endTime     String   
   isAvailable Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

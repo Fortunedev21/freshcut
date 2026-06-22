@@ -397,7 +397,7 @@ export default function Home() {
                 <MapPin className="text-white shrink-0 mt-0.5" size={18} />
                 <div>
                   <h4 className="font-semibold text-white mb-0.5">Adresse</h4>
-                  <p className="text-white/50 leading-relaxed">Avenue Jean-Paul II, Quartier Haie Vive,<br />Immeuble Premium, Cotonou, Bénin</p>
+                  <p className="text-white/50 leading-relaxed">Carrefour Vodjè Rails,<br /> Cotonou, Bénin</p>
                 </div>
               </div>
 
@@ -405,8 +405,7 @@ export default function Home() {
                 <Clock className="text-white shrink-0 mt-0.5" size={18} />
                 <div>
                   <h4 className="font-semibold text-white mb-0.5">Horaires</h4>
-                  <p className="text-white/50">Mardi — Samedi : 09h00 - 21h00</p>
-                  <p className="text-white/50">Dimanche : 10h00 - 18h00</p>
+                  <p className="text-white/50">Lundi — Dimanche : 07h00 - 20h00</p>
                 </div>
               </div>
 
@@ -414,7 +413,7 @@ export default function Home() {
                 <Phone className="text-white shrink-0 mt-0.5" size={18} />
                 <div>
                   <h4 className="font-semibold text-white mb-0.5">Contact</h4>
-                  <p className="text-white/50">+229 01 00 00 00 00</p>
+                  <p className="text-white/50">+229 01 46 46 19 12</p>
                 </div>
               </div>
             </div>
@@ -423,7 +422,7 @@ export default function Home() {
           <div className="lg:col-span-7 h-[380px] w-full rounded-2xl overflow-hidden border border-white/10 relative shadow-2xl">
             <iframe 
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d63443.35320950471!2d2.328098048632812!3d6.366918300000006!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1023556e77d9b28d%3A0x5a2b36eddffb8bae!2sFRESHCUT!5e0!3m2!1sfr!2sbj!4v1781101828671!5m2!1sfr!2sbj"
-              className="w-full h-full border-0 grayscale invert contrast-125 opacity-70 hover:opacity-90 transition-opacity duration-500"
+              className="w-full h-full border-0  invert contrast-125 opacity-70 hover:opacity-90 transition-opacity duration-500"
               allowFullScreen={false} 
               loading="lazy" 
               referrerPolicy="no-referrer-when-downgrade"
