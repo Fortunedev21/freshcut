@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '@/lib/api-response';
 import { getServerSession, requireRole } from '@/lib/auth';
 import { resend } from '@/lib/resend';
 import { formatPrice } from '@/utils/format';
+import { BookingStatus } from '@prisma/client';
 
 // GET all bookings (ADMIN only) or filter by phone (public)
 export async function GET(request: NextRequest) {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
       const bookings = await prisma.booking.findMany({
         where: {
           phoneNumber,
-          ...(status && { status }),
+          ...(status && { status: status as BookingStatus }),
           ...(date && {
             date: {
               gte: new Date(date),
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     const bookings = await prisma.booking.findMany({
       where: {
-        ...(status && { status }),
+        ...(status && { status: status as BookingStatus }),
         ...(date && {
           date: {
             gte: new Date(date),
@@ -70,7 +71,6 @@ export async function POST(request: NextRequest) {
       lastName,
       email,
       serviceId,
-      coupeId,
       date,
       time,
       advanceAmount,
@@ -84,11 +84,14 @@ export async function POST(request: NextRequest) {
 
     const service = await prisma.service.findUnique({
       where: { id: serviceId },
+      include: { prices: true },
     });
 
     if (!service) {
       return errorResponse('Service not found', 404);
     }
+
+    const defaultPrice = service.prices.find(p => p.clientType === 'ADULTE')?.prix || 0;
 
     // Create booking
     const booking = await prisma.booking.create({
@@ -98,11 +101,10 @@ export async function POST(request: NextRequest) {
         lastName,
         email,
         serviceId,
-        ...(coupeId && { coupeId }),
         date: new Date(date),
         time,
-        advanceAmount: parseInt(advanceAmount) || service.prix,
-        totalAmount: parseInt(totalAmount) || service.prix,
+        advanceAmount: parseInt(advanceAmount) || defaultPrice,
+        totalAmount: parseInt(totalAmount) || defaultPrice,
         notes,
       },
       include: { service: true },
@@ -116,14 +118,14 @@ export async function POST(request: NextRequest) {
         firstName,
         lastName,
         points: 1,
-        totalSpent: service.prix,
+        totalSpent: booking.totalAmount,
       },
       update: {
         points: {
           increment: 1,
         },
         totalSpent: {
-          increment: service.prix,
+          increment: booking.totalAmount,
         },
       },
     });

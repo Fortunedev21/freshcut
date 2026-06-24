@@ -1,7 +1,7 @@
 "use client";
 
 import { useKKiaPay } from "kkiapay-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -37,13 +37,6 @@ type SelectedService = {
   prices: ServicePriceData[]; // 👈 Ajout du tableau des tarifs
 };
 
-type CoupeType = {
-  id: string;
-  nom: string;
-  tempsEstimation: string;
-  prix?: number; 
-};
-
 interface BookingState {
   step: number;
   serviceId: string | null;
@@ -74,10 +67,9 @@ function formatFCA(value: number) {
   return `${new Intl.NumberFormat("fr-FR").format(value)} FCFA`;
 }
 
-export default function Reserver() {
+function ReserverContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const coupeParam = searchParams.get("coupe");
   const serviceParam = searchParams.get("service");
   const phoneParam = searchParams.get("phone");
   
@@ -85,8 +77,6 @@ export default function Reserver() {
   const urlClientType = (searchParams.get("type")?.toUpperCase() as "ADULTE" | "ETUDIANT" | "ENFANT") || "ADULTE";
 
   const [services, setServices] = useState<SelectedService[]>([]);
-  const [coupes, setCoupes] = useState<CoupeType[]>([]);
-  const [selectedCoupe, setSelectedCoupe] = useState<CoupeType | null>(null);
   const [loading, setLoading] = useState(true);
   
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
@@ -112,7 +102,7 @@ export default function Reserver() {
     return SERVICE_SLUG_TO_NAME[serviceParam] ?? serviceParam;
   }, [serviceParam]);
 
-  // Récupération des services et des coupes en ligne
+  // Récupération des services en ligne
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true); 
@@ -125,19 +115,7 @@ export default function Reserver() {
           setServices(fetchedServices);
         }
 
-        if (coupeParam) {
-          const resCoupes = await fetch("/api/coupes");
-          if (resCoupes.ok) {
-            const payloadCoupes = await resCoupes.json();
-            const fetchedCoupes = (payloadCoupes.data || []) as CoupeType[];
-            setCoupes(fetchedCoupes);
-            
-            const foundCoupe = fetchedCoupes.find((c) => c.id === coupeParam) ?? null;
-            setSelectedCoupe(foundCoupe);
-          }
-        }
-
-        if (!coupeParam && fetchedServices.length > 0) {
+        if (fetchedServices.length > 0) {
           const initialService = fetchedServices.find((s) => {
             const targetName = SERVICE_SLUG_TO_NAME[serviceParam ?? ""];
             if (targetName) {
@@ -162,11 +140,9 @@ export default function Reserver() {
     };
 
     fetchData();
-  }, [selectedServiceName, coupeParam, serviceParam]);
+  }, [selectedServiceName, serviceParam]);
 
   const filteredServices = useMemo(() => {
-    if (coupeParam) return services;
-
     if (serviceParam) {
       const targetName = SERVICE_SLUG_TO_NAME[serviceParam];
       return services.filter((s) => {
@@ -177,18 +153,12 @@ export default function Reserver() {
       });
     }
     return services; 
-  }, [services, serviceParam, coupeParam]);
+  }, [services, serviceParam]);
 
   const handleServiceToggle = (id: string) => {
-    if (coupeParam) {
-      setSelectedServiceIds((prev) =>
-        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-      );
-    } else {
-      setSelectedServiceIds([id]);
-      setState((prev) => ({ ...prev, serviceId: id }));
-      nextStep();
-    }
+    setSelectedServiceIds([id]);
+    setState((prev) => ({ ...prev, serviceId: id }));
+    nextStep();
   };
 
   /**
@@ -204,16 +174,11 @@ export default function Reserver() {
 
   // 2. Calcul dynamique et corrigé du montant total
   const totalPrix = useMemo(() => {
-    const prixCoiffure = selectedCoupe?.prix ?? 0;
     const prixServices = services
       .filter((s) => selectedServiceIds.includes(s.id))
-      .reduce((sum, s) => sum + getServicePrice(s, clientType), 0); // 👈 Utilisation du helper à la place de s.prix
-    return prixCoiffure + prixServices;
-  }, [services, selectedServiceIds, selectedCoupe, clientType]);
-
-  const selectedCoupeSummary = selectedCoupe
-    ? `${selectedCoupe.nom} · ${selectedCoupe.tempsEstimation}`
-    : null;
+      .reduce((sum, s) => sum + getServicePrice(s, clientType), 0);
+    return prixServices;
+  }, [services, selectedServiceIds, clientType]);
 
   const advanceAmount = useMemo(() => {
     return Math.max(500, Math.round(totalPrix * 0.5));
@@ -231,12 +196,12 @@ export default function Reserver() {
 
     openKkiapayWidget({
       amount: advanceAmount,
-      reason: selectedCoupe ? `Avance Réservation ${selectedCoupe.nom}` : `Avance Réservation`,
+      reason: "Avance Réservation",
       phone: state.client.telephone,
       name: `${state.client.prenom} ${state.client.nom}`,
       callback: window.location.origin + "/client",
       publicAPIKey: process.env.NEXT_PUBLIC_KKIAPAY_PUBLIC_KEY,
-      sandbox: false,
+      sandbox: process.env.NEXT_PUBLIC_KKIAPAY_ENVIRONMENT === 'true' || process.env.NEXT_PUBLIC_KKIAPAY_ENVIRONMENT === 'test',
     });
   }
 
@@ -322,14 +287,11 @@ export default function Reserver() {
             lastName: state.client.nom,
             serviceIds: selectedServiceIds,
             clientType, // On sauvegarde la variante choisie en base de données
-            ...(selectedCoupe && { coupeId: selectedCoupe.id }),
             date: state.date,
             time: state.time,
             advanceAmount: advanceAmount,
             totalAmount: totalPrix,
-            notes: selectedCoupe
-              ? `Coiffure choisie: ${selectedCoupe.nom}; Services: ${selectedServiceIds.join(", ")}; TransactionId: ${transactionId}; Profil: ${clientType.toLowerCase()}`
-              : `TransactionId: ${transactionId}; Profil: ${clientType.toLowerCase()}`,
+            notes: `TransactionId: ${transactionId}; Profil: ${clientType.toLowerCase()}`,
             status: transactionId ? "PAID" : "PENDING",
           }),
         });
@@ -338,7 +300,7 @@ export default function Reserver() {
 
         if (!phone) setPhone(phoneNumber);
 
-        addBooking(selectedCoupe?.nom || "Services barbiers", totalPrix);
+        addBooking("Services barbiers", totalPrix);
         alert("Réservation confirmée !");
         router.push("/client");
       } catch {
@@ -347,7 +309,7 @@ export default function Reserver() {
         setSubmitting(false);
       }
     },
-    [state, selectedServiceIds, selectedCoupe, phone, phoneParam, router, setPhone, addBooking, totalPrix, advanceAmount, clientType]
+    [state, selectedServiceIds, phone, phoneParam, router, setPhone, addBooking, totalPrix, advanceAmount, clientType]
   );
 
   return (
@@ -382,21 +344,8 @@ export default function Reserver() {
               className="space-y-6"
             >
               <div className="text-center space-y-2">
-                <h2 className="text-3xl font-bold uppercase tracking-tighter">
-                  {coupeParam ? "Services au choix" : "Votre Service"}
-                </h2>
-                <p className="text-secondary text-sm">
-                  {coupeParam 
-                    ? "Personnalisez votre formule en ajoutant des prestations complémentaires." 
-                    : "Choisissez votre expérience Freshcut."}
-                </p>
-                {selectedCoupeSummary && selectedCoupe != null && (
-                  <div className="inline-flex flex-col items-center gap-1 rounded-2xl border border-white/20 bg-white/5 px-5 py-3 text-[11px] uppercase tracking-[0.1em] text-white animate-pulse">
-                    <span className="text-muted text-[9px]">Coiffure mise en avant :</span>
-                    <strong className="text-sm tracking-normal">{selectedCoupe.nom}</strong>
-                    <span className="text-[10px] text-white/60">({selectedCoupe.tempsEstimation})</span>
-                  </div>
-                )}
+                <h2 className="text-3xl font-bold uppercase tracking-tighter">Votre Service</h2>
+                <p className="text-secondary text-sm">Choisissez votre expérience Freshcut.</p>
                 {/* Petit indicateur discret du profil tarifaire actif */}
                 <div className="text-[10px] uppercase tracking-widest text-white/40 font-medium">
                   Grille tarifaire appliquée : <span className="text-white font-bold">{clientType.toLowerCase()}</span>
@@ -441,21 +390,6 @@ export default function Reserver() {
                   })
                 )}
               </div>
-
-              {coupeParam && (
-                <div className="pt-4 border-t border-glass-border flex flex-col gap-3">
-                  <div className="flex justify-between items-center px-2">
-                    <span className="text-xs uppercase tracking-widest text-muted font-bold">Estimation actuelle :</span>
-                    <span className="font-bold text-xl text-white">{formatFCA(totalPrix)}</span>
-                  </div>
-                  <button
-                    onClick={nextStep}
-                    className="w-full btn-primary py-4 font-bold uppercase tracking-widest text-xs"
-                  >
-                    Suivant
-                  </button>
-                </div>
-              )}
             </motion.div>
           )}
 
@@ -653,7 +587,7 @@ export default function Reserver() {
                   <div className="space-y-1">
                     <div className="text-[10px] uppercase tracking-widest text-muted">Formule</div>
                     <div className="font-bold text-xl uppercase tracking-tighter">
-                      {selectedCoupe ? selectedCoupe.nom : (services.find(s => s.id === state.serviceId)?.nom || "Sur-mesure")}
+                      {services.find(s => s.id === state.serviceId)?.nom || "Sur-mesure"}
                     </div>
                   </div>
                   <div className="text-right space-y-1">
@@ -663,19 +597,6 @@ export default function Reserver() {
                     </div>
                   </div>
                 </div>
-
-                {coupeParam && selectedServiceIds.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-[10px] uppercase tracking-widest text-muted">Services additionnels</div>
-                    <div className="flex flex-wrap gap-2">
-                      {services.filter(s => selectedServiceIds.includes(s.id)).map(s => (
-                        <span key={s.id} className="text-[11px] bg-white/10 px-3 py-1 rounded-full border border-white/5">
-                          {s.nom} ({formatFCA(getServicePrice(s, clientType))})
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-4 uppercase tracking-widest text-[10px] font-bold">
                   <div className="flex justify-between text-secondary">
@@ -743,12 +664,6 @@ export default function Reserver() {
                   <div className="text-sm font-medium">{state.client.prenom} {state.client.nom}</div>
                   <div className="text-[11px] text-secondary mt-1">{state.client.telephone}</div>
                 </div>
-                {selectedCoupeSummary && (
-                  <div className="pt-4">
-                    <div className="text-[10px] uppercase font-bold text-muted tracking-widest mb-1">Coiffure principale</div>
-                    <div className="text-sm font-medium">{selectedCoupeSummary}</div>
-                  </div>
-                )}
               </div>
 
               <div className="bg-white/5 p-4 rounded-xl space-y-2">
@@ -826,5 +741,18 @@ export default function Reserver() {
         )}
       </AnimatePresence>
     </main>
+  );
+}
+
+export default function Reserver() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center justify-center gap-3">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white/80"></div>
+        <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Chargement...</p>
+      </div>
+    }>
+      <ReserverContent />
+    </Suspense>
   );
 }

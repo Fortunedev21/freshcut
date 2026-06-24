@@ -25,20 +25,6 @@ enum UserRole {
   SUPER_ADMIN
 }
 
-model Coupe {
-  id                String   @id @default(cuid())
-  nom               String   @unique
-  description       String
-  tempsEstimation   String   // "45 min", "60 min"
-  difficulte        Int      // 1-5 difficulty level
-  image             String   // URL or path to photo
-  conseils          String[] // Array of care tips
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@index([difficulte])
-}
-
 // ============================================
 // Products (Boutique)
 // ============================================
@@ -53,6 +39,7 @@ model Product {
   stock       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
 
   @@index([categorie])
 }
@@ -104,7 +91,6 @@ model Booking {
   email         String?
   serviceId     String
   service       Service        @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  coupeId       String?        
   barberIdAssigned String?     
   date          DateTime
   time          String         
@@ -182,4 +168,54 @@ model BarberAvailability {
   updatedAt   DateTime @updatedAt
 
   @@index([barberId, dayOfWeek])
+}
+
+// ============================================
+// Boutique Orders (Commandes)
+// ============================================
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PREPARING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id              String       @id @default(cuid())
+  clientNom       String
+  clientPrenom    String
+  clientTelephone String
+  clientEmail     String?
+  adresse         String?      // Requis si mode de livraison
+  ville           String?      // Requis si mode de livraison
+  shippingMethod  String       // "SALON" ou "DELIVERY"
+  shippingCost    Int          @default(0)
+  totalAmount     Int          // Total des produits
+  finalAmount     Int          // Total + frais de port
+  transactionId   String?      // ID de paiement KKiaPay
+  status          OrderStatus  @default(PENDING)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  items           OrderItem[]
+
+  @@index([clientTelephone])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantite  Int
+  prix      Int      // Prix d'achat unitaire enregistré
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
 }

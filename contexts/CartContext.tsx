@@ -7,7 +7,7 @@ export interface CartItem {
   categorie: string;
   prix: number;
   quantite: number;
-  type?: "product" | "service" | "coupe"; // Type de l'article
+  type?: "product" | "service"; // Type de l'article
   description?: string;
 }
 
@@ -43,7 +43,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         categorie: product.categorie,
         prix: product.prix,
         quantite: 1,
-        type: (product.type as "product" | "service" | "coupe") || "product",
+        type: (product.type as "product" | "service") || "product",
         description: product.description
       }];
     });

@@ -74,7 +74,7 @@ export default function Checkout() {
       name: `${state.client.prenom} ${state.client.nom}`,
       callback: window.location.origin + "/boutique/confirmation",
       publicAPIKey: process.env.NEXT_PUBLIC_KKIAPAY_PUBLIC_KEY,
-      sandbox: false,
+      sandbox: process.env.NEXT_PUBLIC_KKIAPAY_ENVIRONMENT === 'true' || process.env.NEXT_PUBLIC_KKIAPAY_ENVIRONMENT === 'test',
     });
     /*
         openKkiapayWidget({
@@ -173,12 +173,12 @@ export default function Checkout() {
       <div className="max-w-xl mx-auto space-y-8">
         
         <div className="flex justify-center items-center gap-4 px-2">
-          {[1, 2].map((i) => (
+          {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 ${state.step >= i ? "bg-white text-black" : "glass-card text-muted"}`}>
                 {state.step > i ? <CheckCircle2 size={16} /> : i}
               </div>
-              {i < 2 && <div className={`w-24 h-px mx-4 ${state.step > i ? "bg-white" : "bg-glass-border"}`} />}
+              {i < 3 && <div className={`w-16 h-px mx-4 ${state.step > i ? "bg-white" : "bg-glass-border"}`} />}
             </div>
           ))}
         </div>
@@ -326,6 +326,59 @@ export default function Checkout() {
                     <CreditCard size={18} />
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          )}
+
+          {state.step === 3 && (
+            <motion.div
+              key="step3"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center space-y-6 glass-card p-8"
+            >
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={36} />
+              </div>
+
+              <div className="space-y-2">
+                <h2 className="text-3xl font-bold uppercase tracking-tighter text-white">Commande validée !</h2>
+                <p className="text-secondary text-sm">Merci pour votre achat. Votre commande a bien été enregistrée.</p>
+              </div>
+
+              <div className="border-t border-b border-white/[0.08] py-4 text-left text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-white/60">Destinataire</span>
+                  <span className="font-medium text-white">{state.client.prenom} {state.client.nom}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60">Mode de retrait</span>
+                  <span className="font-medium text-white uppercase">{state.shippingMethod === "SALON" ? "Retrait Salon" : "Livraison"}</span>
+                </div>
+                {state.shippingMethod === "DELIVERY" && (
+                  <div className="flex justify-between">
+                    <span className="text-white/60">Adresse</span>
+                    <span className="font-medium text-white text-right max-w-xs">{state.client.adresse}, {state.client.ville}</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-white/[0.08] pt-2 font-bold">
+                  <span className="text-white">Montant payé</span>
+                  <span className="text-white">{formatPrice(finalTotal)} FCFA</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4">
+                <p className="text-xs text-white/50">
+                  {state.shippingMethod === "SALON" 
+                    ? "Vous pouvez passer récupérer vos produits au salon Freshcut pendant nos horaires d'ouverture."
+                    : "Notre service de livraison vous contactera au numéro fourni sous 24h à 48h."}
+                </p>
+                <button
+                  onClick={() => router.push('/boutique')}
+                  className="w-full btn-primary py-4 text-xs font-bold uppercase tracking-widest"
+                >
+                  Retour à la boutique
+                </button>
               </div>
             </motion.div>
           )}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut, BookOpen, Phone, Award, History, Calendar } from 'lucide-react';
+import { LogOut, BookOpen, Phone, Award, History, Calendar, ShoppingBag } from 'lucide-react';
 import { formatPrice } from '@/utils/format';
 
 interface ClientData {
@@ -29,10 +29,31 @@ interface Booking {
   totalAmount: number;
 }
 
+interface OrderItemData {
+  id: string;
+  product: {
+    nom: string;
+    image: string | null;
+  };
+  quantite: number;
+  prix: number;
+}
+
+interface OrderData {
+  id: string;
+  shippingMethod: string;
+  shippingCost: number;
+  finalAmount: number;
+  status: string;
+  createdAt: string;
+  items: OrderItemData[];
+}
+
 export default function ClientDashboard() {
   const router = useRouter();
   const [client, setClient] = useState<ClientData | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [orders, setOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('bookings');
 
@@ -45,6 +66,7 @@ export default function ClientDashboard() {
     
     fetchClientData(phone);
     fetchBookings(phone);
+    fetchOrders(phone);
   }, []);
 
   const fetchClientData = async (phone: string) => {
@@ -70,6 +92,18 @@ export default function ClientDashboard() {
       console.error('Failed to fetch bookings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchOrders = async (phone: string) => {
+    try {
+      const response = await fetch(`/api/orders?phone=${encodeURIComponent(phone)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data.data || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
     }
   };
 
@@ -142,6 +176,17 @@ export default function ClientDashboard() {
           >
             <Calendar size={18} />
             Mes Réservations
+          </button>
+          <button
+            onClick={() => setActiveTab('orders')}
+            className={`flex items-center gap-2 px-4 py-2 font-medium transition whitespace-nowrap ${
+              activeTab === 'orders'
+                ? 'text-white border-b-2 border-white'
+                : 'text-white/60 hover:text-white'
+            }`}
+          >
+            <ShoppingBag size={18} />
+            Mes Commandes
           </button>
           <button
             onClick={() => setActiveTab('loyalty')}
@@ -275,6 +320,75 @@ export default function ClientDashboard() {
                 </div>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Orders Tab */}
+        {activeTab === 'orders' && (
+          <div className="space-y-6">
+            <h2 className="text-2xl font-bold text-white">Mes Commandes Boutique</h2>
+
+            {orders.length === 0 ? (
+              <div className="glass-card p-12 rounded-xl border border-white/10 text-center">
+                <ShoppingBag size={48} className="mx-auto text-white/20 mb-4" />
+                <p className="text-white/60 mb-4">Vous n'avez pas encore passé de commande en boutique</p>
+                <Link href="/boutique" className="text-white hover:underline font-medium">
+                  Visiter la boutique
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {orders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="glass-card p-6 rounded-xl border border-white/10 hover:border-white/20 transition space-y-4"
+                  >
+                    <div className="flex justify-between items-start flex-wrap gap-2">
+                      <div>
+                        <div className="text-xs text-white/40 font-bold uppercase tracking-wider">
+                          Commande #{order.id.slice(-6).toUpperCase()}
+                        </div>
+                        <div className="text-white/60 text-xs mt-1">
+                          Passée le : {new Date(order.createdAt).toLocaleDateString('fr-FR')}
+                        </div>
+                      </div>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
+                        order.status === 'DELIVERED' ? 'bg-green-500/20 text-green-400' :
+                        order.status === 'SHIPPED' ? 'bg-blue-500/20 text-blue-400' :
+                        order.status === 'PAID' ? 'bg-emerald-500/20 text-emerald-400' :
+                        order.status === 'PREPARING' ? 'bg-yellow-500/20 text-yellow-400' :
+                        order.status === 'CANCELLED' ? 'bg-red-500/20 text-red-400' :
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
+                        {order.status}
+                      </span>
+                    </div>
+
+                    <div className="border-t border-b border-white/[0.04] py-4 space-y-2">
+                      {order.items.map((item) => (
+                        <div key={item.id} className="flex justify-between items-center text-sm">
+                          <span className="text-white/80">
+                            {item.product.nom} <span className="text-xs text-white/40">x{item.quantite}</span>
+                          </span>
+                          <span className="font-bold text-white/90">
+                            {formatPrice(item.prix * item.quantite)} F
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex justify-between items-center text-sm font-semibold">
+                      <span className="text-white/40 uppercase tracking-widest text-[10px]">
+                        {order.shippingMethod === 'SALON' ? 'Retrait Salon' : 'Livraison à domicile'}
+                      </span>
+                      <span className="text-white text-base">
+                        Total : {formatPrice(order.finalAmount)} FCFA
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

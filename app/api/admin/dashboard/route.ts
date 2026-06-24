@@ -31,11 +31,18 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Total revenue
-    const totalRevenue = await prisma.booking.aggregate({
+    // Total revenue (Bookings + Boutique Orders)
+    const bookingRevenueSum = await prisma.booking.aggregate({
       where: { status: 'COMPLETED' },
       _sum: { totalAmount: true },
     });
+
+    const boutiqueRevenueSum = await prisma.order.aggregate({
+      where: { status: { in: ['PAID', 'PREPARING', 'SHIPPED', 'DELIVERED'] } },
+      _sum: { finalAmount: true },
+    });
+
+    const totalRevenue = (bookingRevenueSum._sum.totalAmount || 0) + (boutiqueRevenueSum._sum.finalAmount || 0);
 
     // Active clients
     const activeClients = await prisma.client.count();
@@ -46,10 +53,15 @@ export async function GET(request: NextRequest) {
       orderBy: { stock: 'asc' },
     });
 
+    // Pending boutique orders (to be prepared or shipped)
+    const pendingOrders = await prisma.order.count({
+      where: { status: { in: ['PAID', 'PREPARING'] } }
+    });
+
     // This month's revenue
     const monthStart = new Date();
     monthStart.setDate(1);
-    const monthRevenue = await prisma.booking.aggregate({
+    const monthBookingRevenue = await prisma.booking.aggregate({
       where: {
         status: 'COMPLETED',
         createdAt: { gte: monthStart },
@@ -57,13 +69,24 @@ export async function GET(request: NextRequest) {
       _sum: { totalAmount: true },
     });
 
+    const monthBoutiqueRevenue = await prisma.order.aggregate({
+      where: {
+        status: { in: ['PAID', 'PREPARING', 'SHIPPED', 'DELIVERED'] },
+        createdAt: { gte: monthStart },
+      },
+      _sum: { finalAmount: true },
+    });
+
+    const monthRevenue = (monthBookingRevenue._sum.totalAmount || 0) + (monthBoutiqueRevenue._sum.finalAmount || 0);
+
     return successResponse({
       bookingsToday,
       completedToday,
-      totalRevenue: totalRevenue._sum.totalAmount || 0,
+      totalRevenue,
       activeClients,
       lowStock,
-      monthRevenue: monthRevenue._sum.totalAmount || 0,
+      pendingOrders,
+      monthRevenue,
     });
   } catch (error: any) {
     if (error.message === 'Forbidden') {
