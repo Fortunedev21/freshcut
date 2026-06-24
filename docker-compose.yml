@@ -9,8 +9,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-freshcut_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5433:5432" # Changed from 5432 to 5433 to avoid conflicts with host PostgreSQL
+    networks:
+      - db-net
 
   web:
     build:
@@ -21,13 +21,11 @@ services:
         NEXT_PUBLIC_KKIAPAY_ENVIRONMENT: ${NEXT_PUBLIC_KKIAPAY_ENVIRONMENT}
     container_name: freshcut-web
     restart: always
-    ports:
-      - "3000:3000"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-freshcut_admin}:${POSTGRES_PASSWORD:-secure_password_here}@db:5432/${POSTGRES_DB:-freshcut_db}?schema=public
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-some_long_random_string_here}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
       RESEND_API_KEY: ${RESEND_API_KEY}
       SEED_DB: ${SEED_DB:-false}
       NEXT_PUBLIC_KKIAPAY_PUBLIC_KEY: ${NEXT_PUBLIC_KKIAPAY_PUBLIC_KEY}
@@ -36,6 +34,28 @@ services:
       KKIAPAY_SECRET_KEY: ${KKIAPAY_SECRET_KEY}
     depends_on:
       - db
+    labels:
+      - "traefik.enable=true"
+      # Tells Traefik which network to use to connect to this container
+      - "traefik.docker.network=traefik-public"
+      # Route HTTPS traffic for the configured domain
+      - "traefik.http.routers.freshcut.rule=Host(`${DOMAIN_NAME:-localhost}`)"
+      - "traefik.http.routers.freshcut.entrypoints=websecure"
+      - "traefik.http.routers.freshcut.tls.certresolver=letsencrypt"
+      - "traefik.http.services.freshcut.loadbalancer.server.port=3000"
+      # Redirect HTTP traffic to HTTPS
+      - "traefik.http.routers.freshcut-http.rule=Host(`${DOMAIN_NAME:-localhost}`)"
+      - "traefik.http.routers.freshcut-http.entrypoints=web"
+      - "traefik.http.routers.freshcut-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    networks:
+      - db-net
+      - traefik-public
 
 volumes:
   postgres_data:
+
+networks:
+  db-net:
+  traefik-public:
+    external: true
